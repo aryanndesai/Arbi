@@ -12,15 +12,115 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+@keyframes arbi-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes arbi-toast-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -120%);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+@keyframes arbi-toast-out {
+  from {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -120%);
+  }
+}
+
+@keyframes arbi-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes arbi-shimmer {
+  0% {
+    background-position: -400px 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
+}
+
+.animate-arbi-fade-in {
+  animation: arbi-fade-in 280ms ease-out both;
+}
+
+.animate-arbi-toast-in {
+  animation: arbi-toast-in 220ms ease-out both;
+}
+
+.animate-arbi-toast-out {
+  animation: arbi-toast-out 240ms ease-in both;
+}
+
+.animate-arbi-slide-up {
+  animation: arbi-slide-up 220ms ease-out both;
+}
+
+.arbi-skeleton {
+  background: linear-gradient(
+    90deg,
+    rgb(243 244 246) 0%,
+    rgb(229 231 235) 50%,
+    rgb(243 244 246) 100%
+  );
+  background-size: 800px 100%;
+  animation: arbi-shimmer 1.4s ease-in-out infinite;
+}
+
+.arbi-gradient-border {
+  background-image: linear-gradient(
+    90deg,
+    transparent,
+    rgb(0 0 0 / 0.08) 30%,
+    rgb(0 0 0 / 0.08) 70%,
+    transparent
+  );
+}
+
+.arbi-input {
+  width: 100%;
+  border: 1px solid rgb(229 231 235);
+  border-radius: 0.875rem;
+  padding: 0.875rem 1rem;
+  font-size: 0.95rem;
+  color: rgb(17 24 39);
+  background: white;
+  outline: none;
+  transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+}
+
+.arbi-input:focus {
+  border-color: rgb(17 24 39);
+  box-shadow: 0 0 0 4px rgb(0 0 0 / 0.04);
 }
