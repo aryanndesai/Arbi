@@ -1,14 +1,18 @@
-import { getTripById } from "@/lib/mock-data";
+import { getTripById } from "@/db/queries";
 
-// TODO: replace with Supabase query
 export async function GET(
   _request: Request,
   context: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await context.params;
-  const trip = await getTripById(id);
-  if (!trip) {
-    return Response.json({ error: "Trip not found" }, { status: 404 });
+  try {
+    const { id } = await context.params;
+    const trip = await getTripById(id);
+    if (!trip) {
+      return Response.json({ error: "Trip not found" }, { status: 404 });
+    }
+    return Response.json({ trip });
+  } catch (error) {
+    console.error("Error fetching trip:", error);
+    return Response.json({ error: "Failed to fetch trip" }, { status: 500 });
   }
-  return Response.json({ trip });
 }
