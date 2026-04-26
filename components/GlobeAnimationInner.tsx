@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Globe, { type GlobeMethods } from "react-globe.gl";
-import * as THREE from "three";
+
+type Anchor = "ne" | "nw" | "se" | "sw";
 
 type City = {
   id: string;
@@ -10,13 +11,14 @@ type City = {
   flag: string;
   lat: number;
   lng: number;
+  anchor: Anchor;
 };
 
 const CITIES: City[] = [
-  { id: "sin", name: "Singapore", flag: "🇸🇬", lat: 1.3521, lng: 103.8198 },
-  { id: "par", name: "Paris", flag: "🇫🇷", lat: 48.8566, lng: 2.3522 },
-  { id: "tko", name: "Tokyo", flag: "🇯🇵", lat: 35.6762, lng: 139.6503 },
-  { id: "lon", name: "London", flag: "🇬🇧", lat: 51.5074, lng: -0.1278 },
+  { id: "sin", name: "Singapore", flag: "🇸🇬", lat: 1.3521, lng: 103.8198, anchor: "se" },
+  { id: "par", name: "Paris", flag: "🇫🇷", lat: 48.8566, lng: 2.3522, anchor: "ne" },
+  { id: "tko", name: "Tokyo", flag: "🇯🇵", lat: 35.6762, lng: 139.6503, anchor: "nw" },
+  { id: "lon", name: "London", flag: "🇬🇧", lat: 51.5074, lng: -0.1278, anchor: "sw" },
 ];
 
 type Arc = {
@@ -25,8 +27,6 @@ type Arc = {
   startLng: number;
   endLat: number;
   endLng: number;
-  startCity: City;
-  endCity: City;
 };
 
 const ARCS: Arc[] = CITIES.map((from, i) => {
@@ -37,13 +37,11 @@ const ARCS: Arc[] = CITIES.map((from, i) => {
     startLng: from.lng,
     endLat: to.lat,
     endLng: to.lng,
-    startCity: from,
-    endCity: to,
   };
 });
 
-const AMBER = "#f5b04a";
-const AMBER_SOFT = "rgba(245,176,74,0.35)";
+const AMBER = "#F59E0B";
+const AMBER_DIM = "rgba(245, 158, 11, 0.3)";
 const ARC_LEG_MS = 4500;
 
 function greatCircleInterpolate(
@@ -95,15 +93,38 @@ function bearing(
   return (Math.atan2(y, x) * 180) / Math.PI;
 }
 
+function normalizeAngle(deg: number): number {
+  return ((deg + 540) % 360) - 180;
+}
+
+function anchorTransform(anchor: Anchor): string {
+  switch (anchor) {
+    case "ne":
+      return "translate(12px, -120%)";
+    case "nw":
+      return "translate(calc(-100% - 12px), -120%)";
+    case "se":
+      return "translate(12px, 20%)";
+    case "sw":
+      return "translate(calc(-100% - 12px), 20%)";
+  }
+}
+
 export default function GlobeAnimationInner() {
   const containerRef = useRef<HTMLDivElement>(null);
   const globeRef = useRef<GlobeMethods | undefined>(undefined);
   const [size, setSize] = useState({ width: 520, height: 440 });
   const [activeIdx, setActiveIdx] = useState(0);
-  const [plane, setPlane] = useState<{ lat: number; lng: number; rot: number }>({
+  const [plane, setPlane] = useState<{
+    lat: number;
+    lng: number;
+    rot: number;
+    bank: number;
+  }>({
     lat: ARCS[0].startLat,
     lng: ARCS[0].startLng,
     rot: 0,
+    bank: 0,
   });
 
   useEffect(() => {
@@ -143,33 +164,79 @@ export default function GlobeAnimationInner() {
     let raf = 0;
     const startTs = performance.now();
     const arc = ARCS[activeIdx];
+    const start = { lat: arc.startLat, lng: arc.startLng };
+    const end = { lat: arc.endLat, lng: arc.endLng };
     const tick = (now: number) => {
       const t = Math.min(1, (now - startTs) / ARC_LEG_MS);
-      const pos = greatCircleInterpolate(
-        { lat: arc.startLat, lng: arc.startLng },
-        { lat: arc.endLat, lng: arc.endLng },
-        t
-      );
-      const ahead = greatCircleInterpolate(
-        { lat: arc.startLat, lng: arc.startLng },
-        { lat: arc.endLat, lng: arc.endLng },
-        Math.min(1, t + 0.01)
-      );
-      setPlane({ lat: pos.lat, lng: pos.lng, rot: bearing(pos, ahead) });
+      const pos = greatCircleInterpolate(start, end, t);
+      const back = greatCircleInterpolate(start, end, Math.max(0, t - 0.01));
+      const ahead = greatCircleInterpolate(start, end, Math.min(1, t + 0.01));
+      const rot = bearing(pos, ahead);
+      const turn = normalizeAngle(bearing(pos, ahead) - bearing(back, pos));
+      const bank = Math.max(-15, Math.min(15, turn * 12));
+      setPlane({ lat: pos.lat, lng: pos.lng, rot, bank });
       if (t < 1) raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
   }, [activeIdx]);
 
-  const globeMaterial = useMemo(() => {
-    return new THREE.MeshPhongMaterial({
-      color: new THREE.Color("#0f1f3d"),
-      emissive: new THREE.Color("#0a1730"),
-      emissiveIntensity: 0.25,
-      shininess: 6,
-    });
-  }, []);
+  const labelsHtml = useMemo(
+    () =>
+      CITIES.map((c) => ({
+        lat: c.lat,
+        lng: c.lng,
+        kind: "label" as const,
+        html: `<div style="
+          background: rgba(255,255,255,0.95);
+          color: #0a1f44;
+          font: 700 11px/1.3 system-ui, -apple-system, 'Segoe UI Emoji', sans-serif;
+          padding: 3px 8px;
+          border-radius: 999px;
+          box-shadow: 0 1px 4px rgba(0,0,0,0.45);
+          white-space: nowrap;
+          transform: ${anchorTransform(c.anchor)};
+          pointer-events: none;
+          letter-spacing: 0.01em;
+        ">${c.flag} ${c.name}</div>`,
+      })),
+    []
+  );
+
+  const planeHtml = useMemo(
+    () => [
+      {
+        lat: plane.lat,
+        lng: plane.lng,
+        kind: "plane" as const,
+        html: `<div style="
+          transform: translate(-50%, -50%) rotate(${plane.rot - 90}deg);
+          pointer-events: none;
+          width: 22px;
+          height: 22px;
+        ">
+          <div style="
+            transform: perspective(60px) rotateY(${plane.bank}deg);
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          ">
+            <svg width="22" height="22" viewBox="-12 -12 24 24" style="filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));">
+              <path d="M 10 0 L -8 -7 L -2 0 L -8 7 Z" fill="#0a0a0a" stroke="#F59E0B" stroke-width="0.8" stroke-linejoin="round"/>
+            </svg>
+          </div>
+        </div>`,
+      },
+    ],
+    [plane]
+  );
+
+  const htmlElements = useMemo(
+    () => [...labelsHtml, ...planeHtml],
+    [labelsHtml, planeHtml]
+  );
 
   const ringsData = useMemo(
     () =>
@@ -181,49 +248,6 @@ export default function GlobeAnimationInner() {
         repeatPeriod: 1600,
       })),
     []
-  );
-
-  const labelsHtml = useMemo(
-    () =>
-      CITIES.map((c) => ({
-        lat: c.lat,
-        lng: c.lng,
-        html: `<div style="
-          background: white;
-          color: #0a1f44;
-          font: 500 11.5px/1.4 system-ui, -apple-system, 'Segoe UI Emoji', sans-serif;
-          padding: 3px 9px;
-          border-radius: 999px;
-          box-shadow: 0 1px 3px rgba(10,31,68,0.18);
-          white-space: nowrap;
-          transform: translate(10px, -120%);
-          pointer-events: none;
-        ">${c.flag} ${c.name}</div>`,
-      })),
-    []
-  );
-
-  const planeHtml = useMemo(
-    () => [
-      {
-        lat: plane.lat,
-        lng: plane.lng,
-        rot: plane.rot,
-        html: `<div style="
-          transform: translate(-50%, -50%) rotate(${plane.rot - 90}deg);
-          font-size: 18px;
-          line-height: 1;
-          filter: drop-shadow(0 1px 2px rgba(0,0,0,0.35));
-          pointer-events: none;
-        ">✈️</div>`,
-      },
-    ],
-    [plane]
-  );
-
-  const htmlElements = useMemo(
-    () => [...labelsHtml, ...planeHtml],
-    [labelsHtml, planeHtml]
   );
 
   return (
@@ -239,11 +263,10 @@ export default function GlobeAnimationInner() {
         width={size.width}
         height={size.height}
         backgroundColor="rgba(0,0,0,0)"
-        globeMaterial={globeMaterial}
+        globeImageUrl="//unpkg.com/three-globe/example/img/earth-night.jpg"
         showAtmosphere
         atmosphereColor="#7aa2ff"
         atmosphereAltitude={0.18}
-        showGraticules
         ringsData={ringsData}
         ringColor={() => AMBER}
         ringMaxRadius="maxR"
@@ -262,23 +285,27 @@ export default function GlobeAnimationInner() {
         arcEndLat="endLat"
         arcEndLng="endLng"
         arcAltitude={0.32}
-        arcStroke={0.45}
+        arcStroke={2}
         arcColor={(d: object) =>
-          (d as Arc).id === ARCS[activeIdx].id ? AMBER : AMBER_SOFT
+          (d as Arc).id === ARCS[activeIdx].id ? AMBER : AMBER_DIM
         }
-        arcDashLength={0.35}
-        arcDashGap={1.8}
+        arcDashLength={0.4}
+        arcDashGap={0.2}
         arcDashInitialGap={1}
         arcDashAnimateTime={ARC_LEG_MS}
         arcsTransitionDuration={400}
         htmlElementsData={htmlElements}
         htmlLat="lat"
         htmlLng="lng"
-        htmlAltitude={0.02}
+        htmlAltitude={0.04}
         htmlElement={(d: object) => {
           const wrap = document.createElement("div");
           wrap.innerHTML = (d as { html: string }).html;
           return wrap.firstElementChild as HTMLElement;
+        }}
+        htmlElementVisibilityModifier={(el, isVisible) => {
+          el.style.opacity = isVisible ? "1" : "0";
+          el.style.transition = "opacity 200ms";
         }}
       />
     </div>
