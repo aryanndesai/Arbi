@@ -5,7 +5,7 @@ export async function GET() {
     const trips = await getTrips();
     return Response.json({ trips });
   } catch (error) {
-    console.error("Error fetching trips:", error);
+    console.error("FULL ERROR:", error);
     return Response.json({ error: "Failed to fetch trips" }, { status: 500 });
   }
 }
