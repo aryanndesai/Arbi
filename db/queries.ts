@@ -4,13 +4,8 @@ import {
   users,
   trips,
   itemRequests,
-  matches,
-  reviews,
   NewTrip,
   NewItemRequest,
-  Trip,
-  ItemRequest,
-  User,
 } from './schema';
 
 // Trips queries
@@ -43,7 +38,7 @@ export async function getTripById(id: string) {
   const tripData = await db
     .select()
     .from(trips)
-    .where(eq(trips.id, id as any))
+    .where(eq(trips.id, id as string))
     .limit(1);
 
   if (!tripData[0]) {
@@ -55,12 +50,12 @@ export async function getTripById(id: string) {
   const requests = await db
     .select()
     .from(itemRequests)
-    .where(eq(itemRequests.tripId, id as any));
+    .where(eq(itemRequests.tripId, id as string));
 
   const traveler = await db
     .select()
     .from(users)
-    .where(eq(users.id, trip.travelerId as any))
+    .where(eq(users.id, trip.travelerId as string))
     .limit(1);
 
   return {
@@ -79,7 +74,7 @@ export async function getTripsForUser(userId: string) {
   return await db
     .select()
     .from(trips)
-    .where(eq(trips.travelerId, userId as any));
+    .where(eq(trips.travelerId, userId as string));
 }
 
 // Item requests queries
@@ -87,7 +82,7 @@ export async function getRequestsForTrip(tripId: string) {
   return await db
     .select()
     .from(itemRequests)
-    .where(eq(itemRequests.tripId, tripId as any));
+    .where(eq(itemRequests.tripId, tripId as string));
 }
 
 export async function createRequest(data: NewItemRequest) {
@@ -102,7 +97,7 @@ export async function getRequestsForUser(userId: string) {
   return await db
     .select()
     .from(itemRequests)
-    .where(eq(itemRequests.buyerId, userId as any));
+    .where(eq(itemRequests.buyerId, userId as string));
 }
 
 // User queries
@@ -110,7 +105,7 @@ export async function getUserById(id: string) {
   const result = await db
     .select()
     .from(users)
-    .where(eq(users.id, id as any))
+    .where(eq(users.id, id as string))
     .limit(1);
 
   return result[0] || null;

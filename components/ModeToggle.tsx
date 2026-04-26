@@ -47,14 +47,14 @@ export default function ModeToggle() {
       <div
         role="tablist"
         aria-label="Switch between traveller and shopper modes"
-        className="relative inline-flex items-center rounded-full bg-gray-100/90 p-1 text-xs font-medium border border-gray-200/80 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)]"
+        className="relative inline-flex items-center"
       >
         <span
           aria-hidden
-          className={`absolute top-1 left-1 h-[calc(100%-8px)] rounded-full bg-gray-900 shadow-[0_2px_6px_rgba(0,0,0,0.18)] transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${
+          className={`absolute top-0 left-0 h-full rounded-full bg-gray-900 shadow-[0_2px_6px_rgba(0,0,0,0.18)] transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${
             mode === "shopping" ? "translate-x-full" : "translate-x-0"
           }`}
-          style={{ width: "calc(50% - 4px)" }}
+          style={{ width: "50%" }}
         />
         <button
           type="button"

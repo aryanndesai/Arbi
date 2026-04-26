@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import ModeToggle from "@/components/ModeToggle";
+import { SignInButton, UserButton, Show } from "@clerk/nextjs";
 
 const navLinks = [
   { href: "/trips", label: "Browse trips" },
@@ -68,13 +69,45 @@ export default function Navbar() {
         </div>
 
         <div className="flex items-center gap-3">
-          <ModeToggle />
-          <Link
-            href="/dashboard"
-            className="hidden sm:inline-block px-4 py-2 text-sm bg-black text-white rounded-full hover:bg-gray-800 transition-colors"
-          >
-            My account
-          </Link>
+          <div className="flex items-center rounded-full bg-gray-100/90 p-1 text-xs font-medium border border-gray-200/80 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] gap-1">
+            <ModeToggle />
+            <div className="hidden sm:block w-px h-4 bg-gray-300"></div>
+            <Show when="signed-in">
+              <UserButton appearance={{ elements: { avatarBox: "w-7 h-7" } }}>
+                <UserButton.MenuItems>
+                  <UserButton.Link
+                    label="Dashboard"
+                    href="/dashboard"
+                    labelIcon={
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <rect width="7" height="9" x="3" y="3" rx="1" />
+                        <rect width="7" height="5" x="14" y="3" rx="1" />
+                        <rect width="7" height="9" x="14" y="12" rx="1" />
+                        <rect width="7" height="5" x="3" y="16" rx="1" />
+                      </svg>
+                    }
+                  />
+                </UserButton.MenuItems>
+              </UserButton>
+            </Show>
+            <Show when="signed-out">
+              <SignInButton mode="modal">
+                <button className="hidden sm:flex items-center justify-center h-7 px-3 rounded-full bg-white text-[10px] font-bold text-gray-700 hover:bg-gray-50 transition-colors shadow-sm">
+                  Sign In
+                </button>
+              </SignInButton>
+            </Show>
+          </div>
           <button
             type="button"
             aria-label={mobileOpen ? "Close menu" : "Open menu"}
