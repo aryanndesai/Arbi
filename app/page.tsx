@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import TripCard from "@/components/TripCard";
-import GlobeAnimation from "@/components/GlobeAnimation";
+import WorldMapLoader from "@/components/WorldMapLoader";
 import { getTrips } from "@/lib/mock-data";
 
 export default async function Home() {
@@ -20,7 +20,7 @@ export default async function Home() {
           Travelers post trips. Buyers attach requests. Everyone wins.
         </p>
         <div className="-my-2 sm:-my-4">
-          <GlobeAnimation />
+          <WorldMapLoader />
         </div>
         <div className="flex gap-3 justify-center">
           <Link

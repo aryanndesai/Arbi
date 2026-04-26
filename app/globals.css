@@ -1,4 +1,17 @@
+@import "mapbox-gl/dist/mapbox-gl.css";
 @import "tailwindcss";
+
+/* Restore mapbox popup arrow — Tailwind preflight resets border styles that mapbox relies on */
+.mapboxgl-popup-tip {
+  border-top-color: #ffffff !important;
+  border-bottom-color: #ffffff !important;
+}
+.mapboxgl-popup-content {
+  padding: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
 
 :root {
   --background: #ffffff;

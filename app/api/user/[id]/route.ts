@@ -1,3 +1,4 @@
+import { auth } from "@clerk/nextjs/server";
 import {
   getRequestsForUser,
   getTripsForUser,
@@ -8,6 +9,11 @@ export async function GET(
   _request: Request,
   context: { params: Promise<{ id: string }> }
 ) {
+  const { userId } = await auth();
+  if (!userId) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const { id } = await context.params;
     const user = await getUserById(id);

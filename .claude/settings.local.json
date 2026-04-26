@@ -6,7 +6,8 @@
       "Bash(npm install *)",
       "Bash(npm uninstall *)",
       "Bash(node -e \"console.log\\(require\\('./node_modules/react-map-gl/package.json'\\).version\\)\")",
-      "Bash(node -e \"const m = require\\('./node_modules/react-map-gl'\\); console.log\\(Object.keys\\(m\\).filter\\(k => !k.startsWith\\('_'\\)\\).join\\(', '\\)\\)\")"
+      "Bash(node -e \"const m = require\\('./node_modules/react-map-gl'\\); console.log\\(Object.keys\\(m\\).filter\\(k => !k.startsWith\\('_'\\)\\).join\\(', '\\)\\)\")",
+      "Bash(node -e \"console.log\\(require\\('./node_modules/mapbox-gl/package.json'\\).version\\)\")"
     ]
   }
 }
