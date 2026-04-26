@@ -1,10 +1,32 @@
-import { clerkMiddleware } from '@clerk/nextjs/server'
+import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
-export default clerkMiddleware()
+// Protected routes — must be signed in
+const isProtectedRoute = createRouteMatcher([
+  "/dashboard(.*)",
+  "/post-trip(.*)",
+  "/post-request(.*)",
+  "/profile(.*)",
+  "/api/requests(.*)",
+  "/api/matches(.*)",
+]);
+
+// /api/trips is split: GET is public (browse), POST requires auth
+const isProtectedTripsApi = createRouteMatcher(["/api/trips(.*)"]);
+
+export default clerkMiddleware(async (auth, req) => {
+  if (isProtectedRoute(req)) {
+    await auth.protect();
+    return;
+  }
+
+  if (isProtectedTripsApi(req) && req.method !== "GET") {
+    await auth.protect();
+  }
+});
 
 export const config = {
   matcher: [
-    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
-    '/(api|trpc)(.*)',
+    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
+    "/(api|trpc)(.*)",
   ],
-}
+};

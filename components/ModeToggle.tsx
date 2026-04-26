@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { UserMode } from "@/types";
+import { setMode as persistMode, useMode } from "@/lib/use-mode";
 
 type ToastState = {
   key: number;
@@ -11,7 +12,7 @@ type ToastState = {
 };
 
 export default function ModeToggle() {
-  const [mode, setMode] = useState<UserMode>("travelling");
+  const mode = useMode();
   const [toast, setToast] = useState<ToastState | null>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const removeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -25,7 +26,7 @@ export default function ModeToggle() {
 
   function switchMode(next: UserMode) {
     if (next === mode) return;
-    setMode(next);
+    persistMode(next);
 
     const message =
       next === "travelling"
@@ -61,7 +62,7 @@ export default function ModeToggle() {
           role="tab"
           aria-selected={mode === "travelling"}
           onClick={() => switchMode("travelling")}
-          className={`relative z-10 w-[88px] sm:w-[96px] px-3 py-1.5 rounded-full transition-colors duration-200 ${
+          className={`relative z-10 w-[88px] sm:w-[96px] px-3 py-1.5 text-center rounded-full transition-colors duration-200 ${
             mode === "travelling"
               ? "text-white"
               : "text-gray-500 hover:text-gray-800"
@@ -74,7 +75,7 @@ export default function ModeToggle() {
           role="tab"
           aria-selected={mode === "shopping"}
           onClick={() => switchMode("shopping")}
-          className={`relative z-10 w-[88px] sm:w-[96px] px-3 py-1.5 rounded-full transition-colors duration-200 ${
+          className={`relative z-10 w-[88px] sm:w-[96px] px-3 py-1.5 text-center rounded-full transition-colors duration-200 ${
             mode === "shopping"
               ? "text-white"
               : "text-gray-500 hover:text-gray-800"
@@ -90,13 +91,13 @@ export default function ModeToggle() {
               key={toast.key}
               role="status"
               aria-live="polite"
-              className={`fixed left-1/2 top-5 z-50 -translate-x-1/2 ${
+              className={`fixed inset-x-0 top-5 z-50 flex justify-center pointer-events-none ${
                 toast.closing
                   ? "animate-arbi-toast-out"
                   : "animate-arbi-toast-in"
               }`}
             >
-              <div className="px-4 py-2.5 rounded-full bg-gray-900 text-white text-sm font-medium shadow-lg shadow-black/10">
+              <div className="px-4 py-2.5 rounded-full bg-gray-900 text-white text-sm font-medium shadow-lg shadow-black/10 whitespace-nowrap text-center pointer-events-auto">
                 {toast.message}
               </div>
             </div>,

@@ -1,12 +1,8 @@
 import { auth } from "@clerk/nextjs/server";
 import { getTrips, createTrip } from "@/db/queries";
 
+// GET is public — anyone can browse trips
 export async function GET() {
-  const { userId } = await auth();
-  if (!userId) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   try {
     const trips = await getTrips();
     return Response.json({ trips });

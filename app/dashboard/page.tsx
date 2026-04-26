@@ -1,13 +1,8 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { auth } from "@clerk/nextjs/server";
 import Navbar from "@/components/Navbar";
-import TripCard from "@/components/TripCard";
-import {
-  getCurrentUserId,
-  getRequestsForUser,
-  getTripsForUser,
-  getUserById,
-} from "@/lib/mock-data";
-import type { ItemRequest } from "@/types";
+import { getRequestsForUser, getTripsForUser } from "@/db/queries";
 
 type Tab = "trips" | "requests";
 
@@ -15,40 +10,33 @@ function isTab(value: string | undefined): value is Tab {
   return value === "trips" || value === "requests";
 }
 
-function formatStatus(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1).replace(/_/g, " ");
+function formatDate(iso: string | null): string {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
-function RequestRow({ request }: { request: ItemRequest }) {
-  return (
-    <li className="flex items-start justify-between gap-4 py-4 border-b border-gray-100 last:border-b-0">
-      <div className="min-w-0">
-        <p className="text-sm font-medium text-gray-900 truncate">
-          {request.itemName}
-        </p>
-        <p className="text-xs text-gray-500 truncate">
-          Trip {request.tripId} ·{" "}
-          <a
-            href={request.itemUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="underline hover:text-gray-900"
-          >
-            Item link
-          </a>
-        </p>
-      </div>
-      <div className="text-right shrink-0">
-        <p className="text-sm font-medium text-gray-900">
-          ${request.maxBudget}
-        </p>
-        <p className="text-xs text-gray-500">+${request.courierFee} fee</p>
-        <span className="inline-block mt-1 text-[10px] uppercase tracking-wide text-gray-500">
-          {formatStatus(request.status)}
-        </span>
-      </div>
-    </li>
-  );
+function statusBadge(status: string | null): { label: string; cls: string } {
+  switch (status) {
+    case "accepted":
+      return { label: "Accepted", cls: "bg-green-100 text-green-800 border-green-200" };
+    case "declined":
+      return { label: "Declined", cls: "bg-gray-100 text-gray-700 border-gray-200" };
+    case "completed":
+      return { label: "Completed", cls: "bg-blue-100 text-blue-800 border-blue-200" };
+    case "in_transit":
+      return { label: "In transit", cls: "bg-purple-100 text-purple-800 border-purple-200" };
+    case "full":
+      return { label: "Full", cls: "bg-amber-100 text-amber-800 border-amber-200" };
+    case "open":
+      return { label: "Open", cls: "bg-amber-100 text-amber-800 border-amber-200" };
+    case "pending":
+    default:
+      return { label: "Pending", cls: "bg-amber-100 text-amber-800 border-amber-200" };
+  }
 }
 
 export default async function DashboardPage({
@@ -56,12 +44,15 @@ export default async function DashboardPage({
 }: {
   searchParams: Promise<{ tab?: string }>;
 }) {
-  const userId = getCurrentUserId();
+  const { userId } = await auth();
+  if (!userId) {
+    redirect("/sign-in");
+  }
+
   const params = await searchParams;
   const tab: Tab = isTab(params.tab) ? params.tab : "trips";
 
-  const [user, trips, requests] = await Promise.all([
-    getUserById(userId),
+  const [trips, requests] = await Promise.all([
     getTripsForUser(userId),
     getRequestsForUser(userId),
   ]);
@@ -72,11 +63,7 @@ export default async function DashboardPage({
 
       <section className="max-w-4xl mx-auto px-6 pt-12 pb-6 animate-arbi-fade-in">
         <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-        {user && (
-          <p className="text-gray-500 mt-1">
-            Welcome back, {user.fullName.split(" ")[0]}.
-          </p>
-        )}
+        <p className="text-gray-500 mt-1">Welcome back.</p>
 
         <div className="mt-8 inline-flex rounded-full border border-gray-200 p-1 bg-gray-50 text-sm">
           <Link
@@ -107,29 +94,93 @@ export default async function DashboardPage({
           trips.length === 0 ? (
             <EmptyState
               emoji="✈️"
-              title="No trips yet"
+              title="You haven't posted any trips yet"
               body="Post a trip to start earning courier fees on your spare luggage."
-              cta={{ href: "/post-trip", label: "Post a trip" }}
+              cta={{ href: "/post-trip", label: "Post your first trip →" }}
             />
           ) : (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {trips.map((trip) => (
-                <TripCard key={trip.id} trip={trip} />
-              ))}
-            </div>
+            <ul className="border border-gray-100 rounded-2xl divide-y divide-gray-100">
+              {trips.map((trip) => {
+                const badge = statusBadge(trip.status);
+                return (
+                  <li key={trip.id}>
+                    <Link
+                      href={`/trips/${trip.id}`}
+                      className="flex items-center justify-between gap-4 px-5 py-4 hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="min-w-0 flex items-center gap-3">
+                        <div className="flex items-center gap-1.5 text-lg">
+                          <span>{trip.fromFlag ?? "🌍"}</span>
+                          <span className="text-gray-300 text-sm">→</span>
+                          <span>{trip.toFlag ?? "🌍"}</span>
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">
+                            {trip.fromCountry} → {trip.toCountry}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {formatDate(trip.departureDate)} · {trip.capacityKg}kg available
+                          </p>
+                        </div>
+                      </div>
+                      <span
+                        className={`text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full border ${badge.cls}`}
+                      >
+                        {badge.label}
+                      </span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
           )
         ) : requests.length === 0 ? (
           <EmptyState
             emoji="🛍️"
-            title="No requests yet"
-            body="Browse open trips and attach an item request to one."
-            cta={{ href: "/trips", label: "Browse trips" }}
+            title="You haven't made any requests yet"
+            body="Find a traveler heading where you need an item from."
+            cta={{ href: "/trips", label: "Browse open trips →" }}
           />
         ) : (
-          <ul className="border border-gray-100 rounded-2xl px-4">
-            {requests.map((r) => (
-              <RequestRow key={r.id} request={r} />
-            ))}
+          <ul className="border border-gray-100 rounded-2xl divide-y divide-gray-100">
+            {requests.map((r) => {
+              const badge = statusBadge(r.status);
+              return (
+                <li
+                  key={r.id}
+                  className="flex items-start justify-between gap-4 px-5 py-4"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">
+                      {r.itemName}
+                    </p>
+                    {r.itemUrl && (
+                      <a
+                        href={r.itemUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-xs text-gray-500 underline hover:text-gray-900"
+                      >
+                        Item link
+                      </a>
+                    )}
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-sm font-medium text-gray-900">
+                      ${r.maxBudget}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      + ${r.courierFee ?? "0"} fee
+                    </p>
+                    <span
+                      className={`inline-block mt-1 text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full border ${badge.cls}`}
+                    >
+                      {badge.label}
+                    </span>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>

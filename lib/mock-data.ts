@@ -73,7 +73,7 @@ const requests: ItemRequest[] = [
     itemImageUrl: "",
     maxBudget: 950,
     courierFee: 60,
-    status: "open",
+    status: "pending",
   },
   {
     id: "r_2",
@@ -84,7 +84,7 @@ const requests: ItemRequest[] = [
     itemImageUrl: "",
     maxBudget: 110,
     courierFee: 20,
-    status: "open",
+    status: "pending",
   },
   {
     id: "r_3",
@@ -185,7 +185,7 @@ const matches: Match[] = [
     id: "m_1",
     requestId: "r_3",
     tripId: "t_2",
-    status: "agreed",
+    status: "active",
     agreedPrice: 175,
     courierFee: 25,
   },

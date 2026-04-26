@@ -30,7 +30,7 @@ export default function PostRequestForm({ tripId }: Props) {
         body: JSON.stringify({ tripId, ...form }),
       });
       if (!res.ok) throw new Error("Failed to submit request");
-      router.push(`/trips/${tripId}`);
+      router.push("/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
       setSubmitting(false);

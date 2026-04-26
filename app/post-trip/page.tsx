@@ -32,7 +32,7 @@ export default function PostTripPage() {
         body: JSON.stringify(form),
       });
       if (!res.ok) throw new Error("Failed to post trip");
-      router.push("/trips");
+      router.push("/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
       setSubmitting(false);

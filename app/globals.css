@@ -32,22 +32,22 @@ body {
 @keyframes arbi-toast-in {
   from {
     opacity: 0;
-    transform: translate(-50%, -120%);
+    transform: translateY(-120%);
   }
   to {
     opacity: 1;
-    transform: translate(-50%, 0);
+    transform: translateY(0);
   }
 }
 
 @keyframes arbi-toast-out {
   from {
     opacity: 1;
-    transform: translate(-50%, 0);
+    transform: translateY(0);
   }
   to {
     opacity: 0;
-    transform: translate(-50%, -120%);
+    transform: translateY(-120%);
   }
 }
 

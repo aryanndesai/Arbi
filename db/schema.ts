@@ -8,8 +8,9 @@ import {
   pgTable,
 } from 'drizzle-orm/pg-core';
 
+// users.id stores Clerk user IDs (e.g. "user_2abc123") — text, not uuid
 export const users = pgTable('users', {
-  id: uuid('id').primaryKey().defaultRandom(),
+  id: text('id').primaryKey(),
   email: text('email').unique().notNull(),
   fullName: text('full_name').notNull(),
   avatarInitials: text('avatar_initials'),
@@ -22,7 +23,7 @@ export const users = pgTable('users', {
 
 export const trips = pgTable('trips', {
   id: uuid('id').primaryKey().defaultRandom(),
-  travelerId: uuid('traveler_id').references(() => users.id),
+  travelerId: text('traveler_id').references(() => users.id),
   fromCountry: text('from_country').notNull(),
   toCountry: text('to_country').notNull(),
   fromFlag: text('from_flag'),
@@ -37,7 +38,7 @@ export const trips = pgTable('trips', {
 export const itemRequests = pgTable('item_requests', {
   id: uuid('id').primaryKey().defaultRandom(),
   tripId: uuid('trip_id').references(() => trips.id),
-  buyerId: uuid('buyer_id').references(() => users.id),
+  buyerId: text('buyer_id').references(() => users.id),
   itemName: text('item_name').notNull(),
   itemUrl: text('item_url'),
   itemImageUrl: text('item_image_url'),
@@ -60,8 +61,8 @@ export const matches = pgTable('matches', {
 export const reviews = pgTable('reviews', {
   id: uuid('id').primaryKey().defaultRandom(),
   matchId: uuid('match_id').references(() => matches.id),
-  raterId: uuid('rater_id').references(() => users.id),
-  rateeId: uuid('ratee_id').references(() => users.id),
+  raterId: text('rater_id').references(() => users.id),
+  rateeId: text('ratee_id').references(() => users.id),
   rating: decimal('rating', { precision: 3, scale: 1 }).notNull(),
   comment: text('comment'),
   createdAt: timestamp('created_at').defaultNow(),

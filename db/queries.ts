@@ -6,6 +6,7 @@ import {
   itemRequests,
   NewTrip,
   NewItemRequest,
+  NewUser,
 } from './schema';
 
 // Trips queries
@@ -38,7 +39,7 @@ export async function getTripById(id: string) {
   const tripData = await db
     .select()
     .from(trips)
-    .where(eq(trips.id, id as string))
+    .where(eq(trips.id, id))
     .limit(1);
 
   if (!tripData[0]) {
@@ -50,13 +51,15 @@ export async function getTripById(id: string) {
   const requests = await db
     .select()
     .from(itemRequests)
-    .where(eq(itemRequests.tripId, id as string));
+    .where(eq(itemRequests.tripId, id));
 
-  const traveler = await db
-    .select()
-    .from(users)
-    .where(eq(users.id, trip.travelerId as string))
-    .limit(1);
+  const traveler = trip.travelerId
+    ? await db
+        .select()
+        .from(users)
+        .where(eq(users.id, trip.travelerId))
+        .limit(1)
+    : [];
 
   return {
     ...trip,
@@ -74,7 +77,7 @@ export async function getTripsForUser(userId: string) {
   return await db
     .select()
     .from(trips)
-    .where(eq(trips.travelerId, userId as string));
+    .where(eq(trips.travelerId, userId));
 }
 
 // Item requests queries
@@ -82,7 +85,7 @@ export async function getRequestsForTrip(tripId: string) {
   return await db
     .select()
     .from(itemRequests)
-    .where(eq(itemRequests.tripId, tripId as string));
+    .where(eq(itemRequests.tripId, tripId));
 }
 
 export async function createRequest(data: NewItemRequest) {
@@ -97,7 +100,28 @@ export async function getRequestsForUser(userId: string) {
   return await db
     .select()
     .from(itemRequests)
-    .where(eq(itemRequests.buyerId, userId as string));
+    .where(eq(itemRequests.buyerId, userId));
+}
+
+export async function getRequestById(id: string) {
+  const result = await db
+    .select()
+    .from(itemRequests)
+    .where(eq(itemRequests.id, id))
+    .limit(1);
+  return result[0] || null;
+}
+
+export async function updateRequestStatus(
+  id: string,
+  status: 'pending' | 'accepted' | 'declined' | 'completed'
+) {
+  const result = await db
+    .update(itemRequests)
+    .set({ status })
+    .where(eq(itemRequests.id, id))
+    .returning();
+  return result[0] || null;
 }
 
 // User queries
@@ -105,8 +129,16 @@ export async function getUserById(id: string) {
   const result = await db
     .select()
     .from(users)
-    .where(eq(users.id, id as string))
+    .where(eq(users.id, id))
     .limit(1);
 
   return result[0] || null;
+}
+
+export async function createUser(data: NewUser) {
+  const result = await db
+    .insert(users)
+    .values(data)
+    .returning();
+  return result[0];
 }

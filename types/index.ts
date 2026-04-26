@@ -1,12 +1,13 @@
 export type UserMode = "travelling" | "shopping";
 
-export type TripStatus = "open" | "matched" | "in_transit" | "delivered" | "cancelled";
+export type RequestStatus = "pending" | "accepted" | "declined" | "completed";
 
-export type RequestStatus = "open" | "accepted" | "purchased" | "delivered" | "cancelled";
+export type TripStatus = "open" | "full" | "in_transit" | "completed";
 
-export type MatchStatus = "pending" | "agreed" | "paid" | "delivered" | "cancelled";
+export type MatchStatus = "active" | "delivered" | "disputed" | "completed";
 
 export interface User {
+  // Clerk format: "user_xxx" (text, not uuid)
   id: string;
   email: string;
   fullName: string;

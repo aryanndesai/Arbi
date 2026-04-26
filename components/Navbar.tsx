@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import ModeToggle from "@/components/ModeToggle";
-import { SignInButton, UserButton, Show } from "@clerk/nextjs";
+import { SignInButton, SignUpButton, UserButton, Show } from "@clerk/nextjs";
 
 const navLinks = [
   { href: "/trips", label: "Browse trips" },
@@ -103,9 +103,14 @@ export default function Navbar() {
             <Show when="signed-out">
               <SignInButton mode="modal">
                 <button className="hidden sm:flex items-center justify-center h-7 px-3 rounded-full bg-white text-[10px] font-bold text-gray-700 hover:bg-gray-50 transition-colors shadow-sm">
-                  Sign In
+                  Sign in
                 </button>
               </SignInButton>
+              <SignUpButton mode="modal">
+                <button className="hidden sm:flex items-center justify-center h-7 px-3 rounded-full bg-gray-900 text-[10px] font-bold text-white hover:bg-gray-800 transition-colors shadow-sm">
+                  Sign up
+                </button>
+              </SignUpButton>
             </Show>
           </div>
           <button
