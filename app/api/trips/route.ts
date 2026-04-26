@@ -1,12 +1,12 @@
-import { getTrips } from "@/lib/mock-data";
+// REAL DB: using Drizzle ORM + Supabase
+// To switch back to mock data, import from @/lib/mock-data
+import { createTrip, getTrips } from "@/db/queries";
 
-// TODO: replace with Supabase query
 export async function GET() {
   const trips = await getTrips();
   return Response.json({ trips });
 }
 
-// TODO: replace with Supabase query
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   if (
@@ -20,15 +20,15 @@ export async function POST(request: Request) {
     return Response.json({ error: "Invalid trip payload" }, { status: 400 });
   }
 
-  const created = {
-    id: `t_${Date.now()}`,
+  const trip = await createTrip({
     fromCountry: body.fromCountry,
     toCountry: body.toCountry,
+    fromFlag: body.fromFlag,
+    toFlag: body.toFlag,
     departureDate: body.departureDate,
     returnDate: body.returnDate,
     capacityKg: body.capacityKg,
-    status: "open" as const,
-  };
+  });
 
-  return Response.json({ trip: created }, { status: 201 });
+  return Response.json({ trip }, { status: 201 });
 }

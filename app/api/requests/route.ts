@@ -1,6 +1,7 @@
-import { getCurrentUserId, getRequestsForUser } from "@/lib/mock-data";
+// REAL DB: using Drizzle ORM + Supabase
+// To switch back to mock data, import from @/lib/mock-data
+import { createRequest, getCurrentUserId, getRequestsForUser } from "@/db/queries";
 
-// TODO: replace with Supabase query
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const userId = url.searchParams.get("userId") ?? getCurrentUserId();
@@ -8,7 +9,6 @@ export async function GET(request: Request) {
   return Response.json({ requests });
 }
 
-// TODO: replace with Supabase query
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   if (
@@ -22,16 +22,14 @@ export async function POST(request: Request) {
     return Response.json({ error: "Invalid request payload" }, { status: 400 });
   }
 
-  const created = {
-    id: `r_${Date.now()}`,
+  const created = await createRequest({
     tripId: body.tripId,
     itemName: body.itemName,
     itemUrl: body.itemUrl,
-    itemImageUrl: "",
+    itemImageUrl: body.itemImageUrl,
     maxBudget: body.maxBudget,
     courierFee: body.courierFee,
-    status: "open" as const,
-  };
+  });
 
   return Response.json({ request: created }, { status: 201 });
 }

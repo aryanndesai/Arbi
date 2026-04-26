@@ -1,6 +1,7 @@
-import { getTripById } from "@/lib/mock-data";
+// REAL DB: using Drizzle ORM + Supabase
+// To switch back to mock data, import from @/lib/mock-data
+import { getTripById } from "@/db/queries";
 
-// TODO: replace with Supabase query
 export async function GET(
   _request: Request,
   context: { params: Promise<{ id: string }> }
