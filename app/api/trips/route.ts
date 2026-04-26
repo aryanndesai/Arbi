@@ -1,3 +1,4 @@
+import { auth } from "@clerk/nextjs/server";
 import { getTrips, createTrip } from "@/db/queries";
 
 export async function GET() {
@@ -11,6 +12,11 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const { userId } = await auth();
+  if (!userId) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const body = await request.json().catch(() => null);
     if (
@@ -19,14 +25,13 @@ export async function POST(request: Request) {
       typeof body.toCountry !== "string" ||
       typeof body.departureDate !== "string" ||
       typeof body.returnDate !== "string" ||
-      typeof body.capacityKg !== "number" ||
-      !body.travelerId
+      typeof body.capacityKg !== "number"
     ) {
       return Response.json({ error: "Invalid trip payload" }, { status: 400 });
     }
 
     const trip = await createTrip({
-      travelerId: body.travelerId,
+      travelerId: userId,
       fromCountry: body.fromCountry,
       toCountry: body.toCountry,
       departureDate: body.departureDate,

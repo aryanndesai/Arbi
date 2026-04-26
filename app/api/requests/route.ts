@@ -1,12 +1,13 @@
+import { auth } from "@clerk/nextjs/server";
 import { getRequestsForUser, createRequest } from "@/db/queries";
 
-export async function GET(request: Request) {
+export async function GET() {
+  const { userId } = await auth();
+  if (!userId) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
-    const url = new URL(request.url);
-    const userId = url.searchParams.get("userId");
-    if (!userId) {
-      return Response.json({ error: "userId is required" }, { status: 400 });
-    }
     const requests = await getRequestsForUser(userId);
     return Response.json({ requests });
   } catch (error) {
@@ -16,12 +17,16 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const { userId } = await auth();
+  if (!userId) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const body = await request.json().catch(() => null);
     if (
       !body ||
       typeof body.tripId !== "string" ||
-      typeof body.buyerId !== "string" ||
       typeof body.itemName !== "string" ||
       typeof body.itemUrl !== "string" ||
       typeof body.maxBudget !== "number" ||
@@ -32,7 +37,7 @@ export async function POST(request: Request) {
 
     const itemRequest = await createRequest({
       tripId: body.tripId,
-      buyerId: body.buyerId,
+      buyerId: userId,
       itemName: body.itemName,
       itemUrl: body.itemUrl,
       itemImageUrl: body.itemImageUrl || null,
