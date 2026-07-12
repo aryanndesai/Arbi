@@ -9,6 +9,7 @@ import type {
   TripStatus,
   User,
 } from "@/types";
+import { readSafeHttpUrl } from "@/lib/validation";
 
 import { getDb } from "./index";
 import { itemRequests, matches, trips, users } from "./schema";
@@ -79,7 +80,12 @@ async function fetchRequestsForTrips(tripIds: string[]): Promise<ItemRequest[]> 
     .from(users)
     .where(inArray(users.id, buyerIds));
   const buyerMap = new Map(buyerRows.map((u) => [u.id, mapUser(u)]));
-  return rows.map((r) => mapRequest(r, buyerMap.get(r.buyerId)!));
+  return rows
+    .map((r) => {
+      const buyer = buyerMap.get(r.buyerId);
+      return buyer ? mapRequest(r, buyer) : null;
+    })
+    .filter((r): r is ItemRequest => r !== null);
 }
 
 // ─── Read queries ─────────────────────────────────────────────────────────────
@@ -107,9 +113,14 @@ export async function getTrips(): Promise<Trip[]> {
     requestsByTrip.set(req.tripId, arr);
   }
 
-  return tripRows.map((t) =>
-    mapTrip(t, travelerMap.get(t.travelerId)!, requestsByTrip.get(t.id) ?? [])
-  );
+  return tripRows
+    .map((t) => {
+      const traveler = travelerMap.get(t.travelerId);
+      return traveler
+        ? mapTrip(t, traveler, requestsByTrip.get(t.id) ?? [])
+        : null;
+    })
+    .filter((t): t is Trip => t !== null);
 }
 
 export async function getTripById(id: string): Promise<Trip | null> {
@@ -198,7 +209,7 @@ export async function createTrip(data: {
   toFlag?: string;
   travelerId?: string;
 }): Promise<Trip> {
-  const id = `t_${Date.now()}`;
+  const id = `t_${crypto.randomUUID()}`;
   await getDb().insert(trips).values({
     id,
     travelerId: data.travelerId ?? PLACEHOLDER_TRAVELER_ID,
@@ -211,7 +222,11 @@ export async function createTrip(data: {
     capacityKg: data.capacityKg,
     status: "open",
   });
-  return (await getTripById(id))!;
+  const trip = await getTripById(id);
+  if (!trip) {
+    throw new Error("Trip was not created");
+  }
+  return trip;
 }
 
 // buyerId comes from auth session in production.
@@ -226,7 +241,17 @@ export async function createRequest(data: {
   courierFee: number;
   buyerId?: string;
 }): Promise<ItemRequest> {
-  const id = `r_${Date.now()}`;
+  const id = `r_${crypto.randomUUID()}`;
+  const safeItemUrl = readSafeHttpUrl(data.itemUrl, "itemUrl");
+  if (!safeItemUrl.ok) {
+    throw new Error(safeItemUrl.error);
+  }
+  const safeItemImageUrl = data.itemImageUrl
+    ? readSafeHttpUrl(data.itemImageUrl, "itemImageUrl")
+    : { ok: true as const, data: "" };
+  if (!safeItemImageUrl.ok) {
+    throw new Error(safeItemImageUrl.error);
+  }
   const [row] = await getDb()
     .insert(itemRequests)
     .values({
@@ -234,8 +259,8 @@ export async function createRequest(data: {
       tripId: data.tripId,
       buyerId: data.buyerId ?? PLACEHOLDER_BUYER_ID,
       itemName: data.itemName,
-      itemUrl: data.itemUrl,
-      itemImageUrl: data.itemImageUrl ?? "",
+      itemUrl: safeItemUrl.data,
+      itemImageUrl: safeItemImageUrl.data ?? "",
       maxBudget: data.maxBudget,
       courierFee: data.courierFee,
       status: "open",
@@ -245,6 +270,9 @@ export async function createRequest(data: {
     .select()
     .from(users)
     .where(eq(users.id, row.buyerId));
+  if (!buyerRow) {
+    throw new Error("Buyer not found");
+  }
   return mapRequest(row, mapUser(buyerRow));
 }
 
@@ -255,7 +283,7 @@ export async function createMatch(data: {
   courierFee: number;
   status?: MatchStatus;
 }): Promise<Match> {
-  const id = `m_${Date.now()}`;
+  const id = `m_${crypto.randomUUID()}`;
   const [row] = await getDb()
     .insert(matches)
     .values({

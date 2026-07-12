@@ -20,6 +20,7 @@ export default function PostTripPage() {
 
   const fromFlag = form.fromCountry ? getCountryFlag(form.fromCountry) : "";
   const toFlag = form.toCountry ? getCountryFlag(form.toCountry) : "";
+  const PLACEHOLDER_USER_ID = "u_1";
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -28,7 +29,10 @@ export default function PostTripPage() {
     try {
       const res = await fetch("/api/trips", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-id": PLACEHOLDER_USER_ID,
+        },
         body: JSON.stringify(form),
       });
       if (!res.ok) throw new Error("Failed to post trip");

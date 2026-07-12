@@ -1,6 +1,8 @@
 // REAL DB: using Drizzle ORM + Supabase
 // To switch back to mock data, import from @/lib/mock-data
 import { createTrip, getTrips } from "@/db/queries";
+import { getRequestUserId } from "@/lib/auth";
+import { validateTripPayload } from "@/lib/validation";
 
 export async function GET() {
   const trips = await getTrips();
@@ -8,26 +10,20 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const userId = getRequestUserId(request);
+  if (!userId) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const body = await request.json().catch(() => null);
-  if (
-    !body ||
-    typeof body.fromCountry !== "string" ||
-    typeof body.toCountry !== "string" ||
-    typeof body.departureDate !== "string" ||
-    typeof body.returnDate !== "string" ||
-    typeof body.capacityKg !== "number"
-  ) {
-    return Response.json({ error: "Invalid trip payload" }, { status: 400 });
+  const validated = validateTripPayload(body);
+  if (!validated.ok) {
+    return Response.json({ error: validated.error }, { status: 400 });
   }
 
   const trip = await createTrip({
-    fromCountry: body.fromCountry,
-    toCountry: body.toCountry,
-    fromFlag: body.fromFlag,
-    toFlag: body.toFlag,
-    departureDate: body.departureDate,
-    returnDate: body.returnDate,
-    capacityKg: body.capacityKg,
+    ...validated.data,
+    travelerId: userId,
   });
 
   return Response.json({ trip }, { status: 201 });

@@ -8,6 +8,8 @@ type Props = {
   tripId: string;
 };
 
+const PLACEHOLDER_USER_ID = "u_1";
+
 export default function PostRequestForm({ tripId }: Props) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
@@ -26,7 +28,10 @@ export default function PostRequestForm({ tripId }: Props) {
     try {
       const res = await fetch("/api/requests", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-id": PLACEHOLDER_USER_ID,
+        },
         body: JSON.stringify({ tripId, ...form }),
       });
       if (!res.ok) throw new Error("Failed to submit request");
