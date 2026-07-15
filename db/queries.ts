@@ -142,3 +142,22 @@ export async function createUser(data: NewUser) {
     .returning();
   return result[0];
 }
+
+type UserProfileUpdate = Pick<NewUser, 'email' | 'fullName' | 'avatarInitials'>;
+
+export async function updateUser(id: string, data: UserProfileUpdate) {
+  const result = await db
+    .update(users)
+    .set(data)
+    .where(eq(users.id, id))
+    .returning();
+  return result[0] || null;
+}
+
+export async function deleteUser(id: string) {
+  const result = await db
+    .delete(users)
+    .where(eq(users.id, id))
+    .returning();
+  return result[0] || null;
+}
