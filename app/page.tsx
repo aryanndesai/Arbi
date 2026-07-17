@@ -4,6 +4,8 @@ import TripCard from "@/components/TripCard";
 import MapWrapper from "@/components/MapWrapper";
 import HeroSection from "@/components/HeroSection";
 import HowItWorks from "@/components/HowItWorks";
+import TrustSignals from "@/components/TrustSignals";
+import RecentMatches from "@/components/RecentMatches";
 import { getDestinationCountries, getTrips } from "@/lib/mock-data";
 
 export default async function Home() {
@@ -25,6 +27,12 @@ export default async function Home() {
 
       {/* How it works — both sides of the marketplace */}
       <HowItWorks />
+
+      {/* Why Arbi is safe to use */}
+      <TrustSignals />
+
+      {/* Social proof — recent deliveries and savings */}
+      <RecentMatches />
 
       {/* Open trips grid */}
       <section className="max-w-4xl mx-auto px-6 pt-4 pb-20">
