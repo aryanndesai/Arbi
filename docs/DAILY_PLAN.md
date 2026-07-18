@@ -31,6 +31,12 @@ NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co   # only if using supabase-js 
 NEXT_PUBLIC_SUPABASE_ANON_KEY=...                    # only if using supabase-js later
 # Deferred (stubs only for now): STRIPE_SECRET_KEY, RESEND_API_KEY, NEXT_PUBLIC_POSTHOG_KEY
 ```
+> **Known blocker (confirmed):** `next build` and Vercel deploys currently **fail** with
+> `DATABASE_URL environment variable is not set` — `db/index.ts` throws at module load, and
+> `/api/requests/[id]/status` imports it during page-data collection. Set `DATABASE_URL` (and
+> Clerk keys) in Vercel's project settings to unblock. Optional code fix: make the DB client
+> lazy so it only throws on first query, not at import (greenlight required — it's app code).
+
 **Test:** dev server loads `/`; `/dashboard` redirects to sign-in when signed out.
 
 ---

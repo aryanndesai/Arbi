@@ -126,3 +126,11 @@ numbers) before mock can be removed. This is the single most important prerequis
 - **G5 — No Drizzle migrations** generated/pushed.
 - **G6 — No `.env.local`**; env vars undocumented in-repo.
 - **G7 — Node modules not installed** in this checkout (blocks build/typecheck until `npm install`).
+- **G8 — Production build fails without env (confirmed 2026-07-18):** `next build` dies at
+  "Collecting page data" with `DATABASE_URL environment variable is not set`, thrown at
+  module load in `db/index.ts` and pulled in by `/api/requests/[id]/status`. TypeScript
+  passes; this is purely the missing env var. Vercel deploys fail for the same reason until
+  `DATABASE_URL` (+ Clerk keys) are set in the Vercel project. **Fix options:** (a) set the
+  env vars in Vercel (no code change), and/or (b) make the DB client lazy so it only throws
+  on first query, not at import — this is the Next.js-friendly pattern and would let builds
+  succeed without a live DB. Option (b) is app code — greenlight before doing it.
