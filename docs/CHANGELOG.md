@@ -17,6 +17,12 @@ dates are the working day.
 - Homepage **Recent matches** section (clearly labelled sample data) as social proof.
 - `components/TrustSignals.tsx` and `components/RecentMatches.tsx`.
 
+### Fixed
+- `db/index.ts` no longer throws at module-evaluation time when `DATABASE_URL` is unset. The
+  Drizzle client is now created lazily on first query via a proxy. This was crashing `next build`
+  (and the Vercel deploy) during "collect page data", since importing a DB route evaluated the
+  client immediately. DB routes are all dynamic and only need a connection at request time.
+
 ### Notes
 - No existing pages/components deleted.
 - Public homepage/browse still read from `lib/mock-data.ts`; migrating them to the real DB is
