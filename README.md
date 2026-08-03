@@ -1,5 +1,13 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Project docs
+
+- `docs/AUDIT.md` — current state of the codebase: what's real, what's stubbed, what's broken.
+- `docs/DAILY_TASKS.md` — the build plan broken into daily, reviewable chunks.
+- `docs/UI_GUIDELINES.md` — the design system already in use, written down so new UI stays consistent.
+- `docs/CHANGELOG.md` — dated log of what changed and why.
+- `docs/TESTING.md` — how to spin up a local DB and manually verify the core flows.
+
 ## Getting Started
 
 First, run the development server:

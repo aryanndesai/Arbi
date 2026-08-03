@@ -72,6 +72,10 @@ async function loadTrip(id: string): Promise<RawTrip | null> {
         status: dbTrip.status,
         travelerName: dbTrip.traveler?.fullName ?? "Traveler",
         travelerInitials: dbTrip.traveler?.avatarInitials ?? null,
+        travelerRating: dbTrip.traveler?.travelerRating
+          ? Number(dbTrip.traveler.travelerRating)
+          : undefined,
+        travelerTripsCompleted: dbTrip.traveler?.tripsCompleted ?? undefined,
         requests: dbTrip.requests.map((r) => ({
           id: r.id,
           itemName: r.itemName,
@@ -80,6 +84,9 @@ async function loadTrip(id: string): Promise<RawTrip | null> {
           courierFee: r.courierFee,
           status: r.status,
           buyerId: r.buyerId,
+          buyerName: r.buyerName ?? undefined,
+          buyerInitials: r.buyerInitials ?? undefined,
+          buyerRating: r.buyerRating ? Number(r.buyerRating) : undefined,
         })),
       };
     }
