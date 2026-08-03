@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import TripCard from "@/components/TripCard";
-import { getDestinationCountries, getTrips } from "@/lib/mock-data";
+import { getDestinationCountries, getTripSummaries } from "@/db/queries";
 
 export default async function TripsPage({
   searchParams,
@@ -9,8 +9,8 @@ export default async function TripsPage({
   searchParams: Promise<{ to?: string }>;
 }) {
   const [trips, countries, params] = await Promise.all([
-    getTrips(),
-    Promise.resolve(getDestinationCountries()),
+    getTripSummaries(),
+    getDestinationCountries(),
     searchParams,
   ]);
 

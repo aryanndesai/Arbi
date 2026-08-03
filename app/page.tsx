@@ -4,12 +4,14 @@ import TripCard from "@/components/TripCard";
 import MapWrapper from "@/components/MapWrapper";
 import HeroSection from "@/components/HeroSection";
 import HowItWorks from "@/components/HowItWorks";
-import { getDestinationCountries, getTrips } from "@/lib/mock-data";
+import { getDestinationCountries, getTripSummaries } from "@/db/queries";
 
 export default async function Home() {
-  const trips = await getTrips();
+  const [trips, destinationCountries] = await Promise.all([
+    getTripSummaries(),
+    getDestinationCountries(),
+  ]);
   const featured = trips.slice(0, 6);
-  const destinationCountries = getDestinationCountries();
 
   return (
     <main className="min-h-screen bg-white">
