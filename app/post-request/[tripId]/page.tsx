@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import PostRequestForm from "@/app/post-request/[tripId]/PostRequestForm";
-import { getTripById } from "@/lib/mock-data";
+import { getTripById } from "@/db/queries";
 
 export default async function PostRequestPage({
   params,
@@ -32,10 +32,10 @@ export default async function PostRequestPage({
           <p className="text-gray-500">
             Attaching to{" "}
             <span className="font-medium text-gray-900">
-              {trip.traveler.fullName}
+              {trip.traveler?.fullName ?? "Traveler"}
             </span>
-            &apos;s trip — {trip.fromFlag} {trip.fromCountry} →{" "}
-            {trip.toFlag} {trip.toCountry}.
+            &apos;s trip — {trip.fromFlag ?? "🌍"} {trip.fromCountry} →{" "}
+            {trip.toFlag ?? "🌍"} {trip.toCountry}.
           </p>
         </div>
 

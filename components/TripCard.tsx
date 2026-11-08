@@ -1,9 +1,9 @@
 import Link from "next/link";
-import type { Trip } from "@/types";
+import type { TripSummary } from "@/types";
 import { getCountryStyle } from "@/lib/country-style";
 
 type TripCardProps = {
-  trip: Trip;
+  trip: TripSummary;
 };
 
 function formatDate(iso: string): string {
@@ -19,9 +19,9 @@ export default function TripCard({ trip }: TripCardProps) {
       href={`/trips/${trip.id}`}
       className={`group relative block rounded-2xl p-5 border ${destStyle.borderClass} ${destStyle.tintClass} hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200`}
     >
-      {trip.requests.length > 0 && (
+      {trip.requestCount > 0 && (
         <span className="absolute top-3 right-3 text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
-          {trip.requests.length} request{trip.requests.length === 1 ? "" : "s"}
+          {trip.requestCount} request{trip.requestCount === 1 ? "" : "s"}
         </span>
       )}
 

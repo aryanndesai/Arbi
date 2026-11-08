@@ -4,9 +4,9 @@ import Navbar from "@/components/Navbar";
 import TripCard from "@/components/TripCard";
 import {
   getRequestsForUser,
-  getTripsForUser,
+  getTripsForUserSummary,
   getUserById,
-} from "@/lib/mock-data";
+} from "@/db/queries";
 
 export default async function ProfilePage({
   params,
@@ -18,9 +18,12 @@ export default async function ProfilePage({
   if (!user) notFound();
 
   const [trips, requests] = await Promise.all([
-    getTripsForUser(id),
+    getTripsForUserSummary(id),
     getRequestsForUser(id),
   ]);
+
+  const travelerRating = Number(user.travelerRating ?? 0);
+  const buyerRating = Number(user.buyerRating ?? 0);
 
   return (
     <main className="min-h-screen bg-white">
@@ -45,10 +48,10 @@ export default async function ProfilePage({
       </section>
 
       <section className="max-w-3xl mx-auto px-6 grid grid-cols-2 sm:grid-cols-4 gap-3 mb-10">
-        <Stat label="Traveler rating" value={`★ ${user.travelerRating.toFixed(1)}`} />
-        <Stat label="Buyer rating" value={`★ ${user.buyerRating.toFixed(1)}`} />
-        <Stat label="Trips done" value={String(user.tripsCompleted)} />
-        <Stat label="Requests done" value={String(user.requestsCompleted)} />
+        <Stat label="Traveler rating" value={`★ ${travelerRating.toFixed(1)}`} />
+        <Stat label="Buyer rating" value={`★ ${buyerRating.toFixed(1)}`} />
+        <Stat label="Trips done" value={String(user.tripsCompleted ?? 0)} />
+        <Stat label="Requests done" value={String(user.requestsCompleted ?? 0)} />
       </section>
 
       <section className="max-w-3xl mx-auto px-6 mb-10">
