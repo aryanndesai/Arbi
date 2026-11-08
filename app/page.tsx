@@ -4,6 +4,8 @@ import TripCard from "@/components/TripCard";
 import MapWrapper from "@/components/MapWrapper";
 import HeroSection from "@/components/HeroSection";
 import HowItWorks from "@/components/HowItWorks";
+import TrustSignals from "@/components/TrustSignals";
+import RecentMatches from "@/components/RecentMatches";
 import { getDestinationCountries, getTripSummaries } from "@/db/queries";
 
 export default async function Home() {
@@ -27,6 +29,12 @@ export default async function Home() {
 
       {/* How it works — both sides of the marketplace */}
       <HowItWorks />
+
+      {/* Trust signals — safety story up front */}
+      <TrustSignals />
+
+      {/* Recent matches — social proof the marketplace is alive */}
+      <RecentMatches />
 
       {/* Open trips grid */}
       <section className="max-w-4xl mx-auto px-6 pt-4 pb-20">
