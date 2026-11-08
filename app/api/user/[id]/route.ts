@@ -1,8 +1,8 @@
 import { auth } from "@clerk/nextjs/server";
 import {
   getRequestsForUser,
+  getPublicUserById,
   getTripsForUser,
-  getUserById,
 } from "@/db/queries";
 
 export async function GET(
@@ -16,7 +16,7 @@ export async function GET(
 
   try {
     const { id } = await context.params;
-    const user = await getUserById(id);
+    const user = await getPublicUserById(id);
     if (!user) {
       return Response.json({ error: "User not found" }, { status: 404 });
     }

@@ -2,15 +2,22 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Project docs
 
-- `docs/AUDIT.md` — current state of the codebase: what's real, what's stubbed, what's broken.
-- `docs/DAILY_TASKS.md` — the build plan broken into daily, reviewable chunks.
+- `docs/AUDIT.md` — current state of the codebase: structure, data flow, branch integration, known gaps.
+- `docs/ROADMAP.md` — what's done and the build plan broken into reviewable chunks.
 - `docs/UI_GUIDELINES.md` — the design system already in use, written down so new UI stays consistent.
 - `docs/CHANGELOG.md` — dated log of what changed and why.
 - `docs/TESTING.md` — how to spin up a local DB and manually verify the core flows.
 
 ## Getting Started
 
-First, run the development server:
+Copy `.env.example` to `.env.local` and fill in `DATABASE_URL` and the Clerk keys, then push the
+schema to your database:
+
+```bash
+npx drizzle-kit push
+```
+
+Then run the development server:
 
 ```bash
 npm run dev

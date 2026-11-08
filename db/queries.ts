@@ -1,45 +1,23 @@
-import { eq, inArray } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray } from 'drizzle-orm';
 import { db } from './index';
 import {
   users,
   trips,
   itemRequests,
+  matches,
   NewTrip,
   NewItemRequest,
+  NewMatch,
   NewUser,
 } from './schema';
 import type { TripSummary } from '@/types';
+import { isUuid } from '@/lib/validation';
 
 function toNumber(value: string | number | null | undefined): number {
   return value === null || value === undefined ? 0 : Number(value);
 }
 
 // Trips queries
-export async function getTrips() {
-  return await db
-    .select({
-      id: trips.id,
-      travelerId: trips.travelerId,
-      fromCountry: trips.fromCountry,
-      toCountry: trips.toCountry,
-      fromFlag: trips.fromFlag,
-      toFlag: trips.toFlag,
-      departureDate: trips.departureDate,
-      returnDate: trips.returnDate,
-      capacityKg: trips.capacityKg,
-      status: trips.status,
-      createdAt: trips.createdAt,
-      traveler: {
-        id: users.id,
-        email: users.email,
-        fullName: users.fullName,
-        avatarInitials: users.avatarInitials,
-      },
-    })
-    .from(trips)
-    .leftJoin(users, eq(trips.travelerId, users.id));
-}
-
 // Trip list shaped for TripCard (home, browse, profile) — real DB data with a
 // request count per trip instead of the full nested request rows.
 export async function getTripSummaries(): Promise<TripSummary[]> {
@@ -60,7 +38,8 @@ export async function getTripSummaries(): Promise<TripSummary[]> {
       travelerTripsCompleted: users.tripsCompleted,
     })
     .from(trips)
-    .leftJoin(users, eq(trips.travelerId, users.id));
+    .leftJoin(users, eq(trips.travelerId, users.id))
+    .orderBy(asc(trips.departureDate));
 
   const requestCounts = await getRequestCountsByTrip(rows.map((r) => r.id));
 
@@ -133,6 +112,9 @@ export async function getDestinationCountries(): Promise<string[]> {
 }
 
 export async function getTripById(id: string) {
+  // Malformed ids would make Postgres throw; treat them as "not found".
+  if (!isUuid(id)) return null;
+
   const tripData = await db
     .select()
     .from(trips)
@@ -163,9 +145,12 @@ export async function getTripById(id: string) {
     })
     .from(itemRequests)
     .leftJoin(users, eq(itemRequests.buyerId, users.id))
-    .where(eq(itemRequests.tripId, id));
+    .where(eq(itemRequests.tripId, id))
+    .orderBy(asc(itemRequests.createdAt));
 
-  const traveler = trip.travelerId ? await getUserById(trip.travelerId) : null;
+  const traveler = trip.travelerId
+    ? await getPublicUserById(trip.travelerId)
+    : null;
 
   return {
     ...trip,
@@ -183,7 +168,8 @@ export async function getTripsForUser(userId: string) {
   return await db
     .select()
     .from(trips)
-    .where(eq(trips.travelerId, userId));
+    .where(eq(trips.travelerId, userId))
+    .orderBy(asc(trips.departureDate));
 }
 
 // Item requests queries
@@ -206,10 +192,21 @@ export async function getRequestsForUser(userId: string) {
   return await db
     .select()
     .from(itemRequests)
-    .where(eq(itemRequests.buyerId, userId));
+    .where(eq(itemRequests.buyerId, userId))
+    .orderBy(desc(itemRequests.createdAt));
+}
+
+export async function getRequestByTripAndBuyer(tripId: string, buyerId: string) {
+  const result = await db
+    .select()
+    .from(itemRequests)
+    .where(and(eq(itemRequests.tripId, tripId), eq(itemRequests.buyerId, buyerId)))
+    .limit(1);
+  return result[0] || null;
 }
 
 export async function getRequestById(id: string) {
+  if (!isUuid(id)) return null;
   const result = await db
     .select()
     .from(itemRequests)
@@ -218,16 +215,34 @@ export async function getRequestById(id: string) {
   return result[0] || null;
 }
 
-export async function updateRequestStatus(
+// Accept/decline is a one-way decision: only a still-pending request changes.
+// Returns null if the request was already resolved (e.g. a double click).
+export async function resolvePendingRequest(
   id: string,
-  status: 'pending' | 'accepted' | 'declined' | 'completed'
+  status: 'accepted' | 'declined'
 ) {
   const result = await db
     .update(itemRequests)
     .set({ status })
-    .where(eq(itemRequests.id, id))
+    .where(and(eq(itemRequests.id, id), eq(itemRequests.status, 'pending')))
     .returning();
   return result[0] || null;
+}
+
+// Match queries
+export async function getMatchByRequestId(requestId: string) {
+  if (!isUuid(requestId)) return null;
+  const result = await db
+    .select()
+    .from(matches)
+    .where(eq(matches.requestId, requestId))
+    .limit(1);
+  return result[0] || null;
+}
+
+export async function createMatch(data: NewMatch) {
+  const result = await db.insert(matches).values(data).returning();
+  return result[0];
 }
 
 // User queries
@@ -241,23 +256,44 @@ export async function getUserById(id: string) {
   return result[0] || null;
 }
 
+// Idempotent: Clerk retries webhooks and API routes may race the webhook, so
+// inserting a user that already exists refreshes their profile instead of
+// failing on the primary key.
+// Everything about a user except their email — safe to show to other users
+// and to return from public endpoints.
+export async function getPublicUserById(id: string) {
+  const result = await db
+    .select({
+      id: users.id,
+      fullName: users.fullName,
+      avatarInitials: users.avatarInitials,
+      travelerRating: users.travelerRating,
+      buyerRating: users.buyerRating,
+      tripsCompleted: users.tripsCompleted,
+      requestsCompleted: users.requestsCompleted,
+      createdAt: users.createdAt,
+    })
+    .from(users)
+    .where(eq(users.id, id))
+    .limit(1);
+
+  return result[0] || null;
+}
+
 export async function createUser(data: NewUser) {
   const result = await db
     .insert(users)
     .values(data)
+    .onConflictDoUpdate({
+      target: users.id,
+      set: {
+        email: data.email,
+        fullName: data.fullName,
+        avatarInitials: data.avatarInitials,
+      },
+    })
     .returning();
   return result[0];
-}
-
-type UserProfileUpdate = Pick<NewUser, 'email' | 'fullName' | 'avatarInitials'>;
-
-export async function updateUser(id: string, data: UserProfileUpdate) {
-  const result = await db
-    .update(users)
-    .set(data)
-    .where(eq(users.id, id))
-    .returning();
-  return result[0] || null;
 }
 
 export async function deleteUser(id: string) {

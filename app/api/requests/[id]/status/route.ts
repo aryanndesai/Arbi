@@ -1,15 +1,15 @@
 import { auth } from "@clerk/nextjs/server";
 import {
+  createMatch,
   getRequestById,
   getTripById,
-  updateRequestStatus,
+  resolvePendingRequest,
 } from "@/db/queries";
-import type { RequestStatus } from "@/types";
 
-const ALLOWED: RequestStatus[] = ["accepted", "declined"];
+type Decision = "accepted" | "declined";
 
-function isAllowed(value: unknown): value is "accepted" | "declined" {
-  return typeof value === "string" && (ALLOWED as string[]).includes(value);
+function isDecision(value: unknown): value is Decision {
+  return value === "accepted" || value === "declined";
 }
 
 export async function PATCH(
@@ -25,7 +25,7 @@ export async function PATCH(
     const { id } = await context.params;
     const body = await request.json().catch(() => null);
 
-    if (!body || !isAllowed(body.status)) {
+    if (!body || !isDecision(body.status)) {
       return Response.json(
         { error: "Invalid status — must be 'accepted' or 'declined'" },
         { status: 400 }
@@ -49,8 +49,28 @@ export async function PATCH(
       );
     }
 
-    const updated = await updateRequestStatus(id, body.status);
-    return Response.json({ request: updated });
+    const updated = await resolvePendingRequest(id, body.status);
+    if (!updated) {
+      return Response.json(
+        { error: `This request has already been ${itemRequest.status}` },
+        { status: 409 }
+      );
+    }
+
+    // Accepting a request is what pairs a buyer with a traveller, so record
+    // the match now (at the buyer's stated budget and fee).
+    let match = null;
+    if (updated.status === "accepted") {
+      match = await createMatch({
+        requestId: updated.id,
+        tripId: itemRequest.tripId,
+        status: "active",
+        agreedPrice: updated.maxBudget,
+        courierFee: updated.courierFee,
+      });
+    }
+
+    return Response.json({ request: updated, match });
   } catch (error) {
     console.error("Error updating request status:", error);
     return Response.json(

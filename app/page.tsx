@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { connection } from "next/server";
 import Navbar from "@/components/Navbar";
 import TripCard from "@/components/TripCard";
 import MapWrapper from "@/components/MapWrapper";
@@ -9,6 +10,9 @@ import RecentMatches from "@/components/RecentMatches";
 import { getDestinationCountries, getTripSummaries } from "@/db/queries";
 
 export default async function Home() {
+  // Trips change constantly — render per request instead of freezing the
+  // list at build time (which also needed a live DATABASE_URL to build).
+  await connection();
   const [trips, destinationCountries] = await Promise.all([
     getTripSummaries(),
     getDestinationCountries(),

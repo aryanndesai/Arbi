@@ -1,68 +1,58 @@
-# Arbi Build Roadmap — Daily Tasks
+# Arbi — Roadmap
 
-_Last updated: 2026-07-22_
+_Last updated: 2026-11-08_
 
-This breaks the full-stack build prompt into small, shippable daily chunks. Each day is scoped to
-be finishable and verifiable on its own. Order reflects **what already exists** (see `AUDIT.md`) so
-we build on top of prior sessions instead of redoing them.
+Consolidated from the daily plans written on the individual `claude/*`
+branches (`ROADMAP.md`, `DAILY_TASKS.md`, `DAILY-PLAN.md`). Each block is meant
+to be one reviewable change. Log finished work in `CHANGELOG.md`.
 
-Legend: `[ ]` todo · `[~]` in progress · `[x]` done. Keep `CHANGELOG.md` in sync.
+Legend: `[ ]` todo · `[x]` done
 
----
+## Done
 
-## Day 1 — Plan + homepage trust & social proof _(this session)_
-- [x] Read the whole codebase, write `AUDIT.md`.
-- [x] Write `ROADMAP.md`, `UI_GUIDELINES.md`, `CHANGELOG.md`.
-- [x] Add a **Trust signals** row to the homepage (Escrow payments, Verified travelers, Money-back guarantee).
-- [x] Add a **Recent matches** section (placeholder data, clearly labelled) to show marketplace liveness.
-- [x] Add `.env.example` documenting every env var the app reads.
-- [x] Verify: `tsc --noEmit` and `next lint` pass.
+- [x] Codebase audit (`AUDIT.md`), UI guidelines, `.env.example`
+- [x] One data source: every page reads Postgres via `db/queries.ts`; `lib/mock-data.ts` removed
+- [x] Trip detail shows real buyer name / initials / rating on each request
+- [x] `middleware.ts` → `proxy.ts` (Next 16 convention)
+- [x] `next build` works without `DATABASE_URL` (lazy DB client; home and browse render per request)
+- [x] Home page trust signals + recent matches (sample data, labelled)
+- [x] Clerk webhook handles `user.created`, `user.updated`, `user.deleted`; idempotent user upsert
+- [x] Signed-in users without a `users` row are created on demand (`ensureUserRecord`)
+- [x] Shared payload validation for trips, requests, matches (`lib/validation.ts`)
+- [x] Request guards: trip must exist and be open, not your own trip, one request per trip
+- [x] Accepting a request is one-way and records a `matches` row
+- [x] Emails no longer exposed by public endpoints or pages
+- [x] Forms show the server's error message
 
-## Day 2 — Kill the data-source split (public pages → real DB)
-- [ ] Add `getFeaturedTrips()` / reuse `getTrips()` and point `/` at the DB.
-- [ ] Point `/trips` browse at the DB; derive destination filters from real rows.
-- [ ] Add a graceful empty state when the DB has no trips (seed CTA), so a fresh DB doesn't look broken.
-- [ ] Keep mock available behind a single dev seed helper, not scattered imports.
+## Next
 
-## Day 3 — Fix the post-request correctness bug
-- [ ] `/post-request/[tripId]` must resolve the trip from the **DB** (UUID), not mock.
-- [ ] Guard: only allow requests on trips with `status = open` and not owned by the requester.
-- [ ] Verify a real posted trip can receive a real request end to end.
+### Dashboard depth
+- [ ] Show pending-request count per trip on "My trips" (`getTripsForUserSummary` already returns `requestCount`)
+- [ ] Show matches (accepted requests) for both sides, with the counterpart's name
+- [ ] "Days until departure" on trip rows
 
-## Day 4 — Trip detail buyer info + profile on real data
-- [ ] Extend `getTripById` to join buyer name/initials onto each request.
-- [ ] Owner view shows real buyer name/initials (no more "?").
-- [ ] Move `/profile/[id]` onto real DB queries + real stats.
+### Real social proof
+- [ ] Replace `RecentMatches` sample data with a query over `matches` ⨝ `item_requests` ⨝ `trips` once there is activity; hide the section when empty
 
-## Day 5 — Clerk webhook completeness
-- [ ] Handle `user.updated` (update row) and `user.deleted` (soft delete / remove).
-- [ ] Confirm signature verification still passes for all three events.
-- [ ] Document the exact Clerk dashboard webhook URL + events in `docs/SETUP.md`.
+### Browse
+- [ ] "Request item" affordance directly on `TripCard`
+- [ ] Pagination for `GET /api/trips` (`page` / `limit`, capped)
+- [ ] Hide or de-emphasise trips whose departure date has passed
 
-## Day 6 — Matches + dashboard depth
-- [ ] Make `/api/matches` persist to the `matches` table.
-- [ ] On accept, create a match; surface it on the dashboard.
-- [ ] Dashboard "My trips" shows a pending-request count per trip.
+### Trip lifecycle
+- [ ] Traveller can mark a trip `full` / `in_transit` / `completed`
+- [ ] Buyer can withdraw a pending request
+- [ ] Match status updates (`delivered`, `completed`) and ratings via the `reviews` table
 
-## Day 7 — UI polish pass
-- [ ] Consistent card/spacing/typography audit against `UI_GUIDELINES.md`.
-- [ ] Loading + empty + error states on every data view.
-- [ ] Accessibility sweep (focus rings, aria labels, contrast).
-- [ ] Mobile pass on every route.
+### Quality
+- [ ] Automated tests for `lib/validation.ts` and the API routes
+- [ ] Loading, empty, and error states on every data view (`error.tsx` for DB outages)
+- [ ] Accessibility pass (focus rings, labels, contrast) and a mobile pass on every route
 
-## Backlog (explicitly out of scope for now)
-- **Tech debt:** Next 16 build warns that the `middleware.ts` convention is deprecated in favour of
-  `proxy`. Migrate deliberately in its own change since it gates auth (see AGENTS.md).
-- Stripe / escrow payments.
-- Resend transactional email + notifications.
-- PostHog analytics.
-- Deploy (owner handles git + Vercel).
+## Backlog (needs an explicit go-ahead)
 
----
-
-### Working rules
-- One day = one coherent, reviewable change set. Commit with a clear message; keep the draft PR updated.
-- Never delete existing pages/components without flagging it first.
-- No `any`. Every API route keeps try/catch + correct status codes.
-- Match existing Tailwind style; see `UI_GUIDELINES.md`.
-</content>
+- Stripe Connect escrow (`lib/stripe.ts`)
+- Resend transactional email + notifications (`lib/resend.ts`)
+- PostHog analytics (`lib/posthog.ts`)
+- Decide whether to delete `lib/supabase.ts` (unused) or keep it for Supabase Storage
+- Claude-powered `ChatWidget` (currently canned replies)

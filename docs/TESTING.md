@@ -1,6 +1,6 @@
 # Arbi — Manual Testing Notes
 
-How today's fix was verified, and how to re-verify the core flows locally without needing real Clerk/Supabase credentials.
+How to verify the core flows locally without needing real Clerk/Supabase credentials.
 
 ## Spinning up a disposable local database
 
@@ -42,7 +42,11 @@ Run `npx next dev`. Clerk automatically falls back to a "keyless" dev mode witho
 | Trip detail (non-owner) | Visit `/trips/<seeded-id>` | Shows the request with buyer name + rating, and the traveler's rating |
 | Post a trip end to end | Sign in, go to `/post-trip`, submit | Redirects to `/dashboard`; new trip immediately visible on `/`, `/trips`, and its own `/trips/[id]` |
 | Request an item end to end | From a trip's detail page, click "Request item", submit | Redirects to `/dashboard`; request appears under "My requests" and on the trip's detail page for the owner |
-| Accept/decline | Sign in as the trip owner, open the trip, click Accept/Decline | Status badge updates without a full page reload; buttons disappear once resolved |
+| Request guards | Try `/post-request/<id>` on your own trip, a non-open trip, or one you already requested on | Redirected back to the trip page; the API returns 403/409 with a readable message |
+| Accept/decline | Sign in as the trip owner, open the trip, click Accept/Decline | Status badge updates without a full page reload; buttons disappear once resolved; accepting adds a row to `matches` |
+| Malformed ids | Visit `/trips/not-a-uuid`, `GET /api/trips/not-a-uuid` | 404, no server error in the log |
+| No email leaks | `curl /api/trips` and `curl /api/trips/<id>` | No `email` field anywhere in the response |
+| User row safety net | Sign in with a Clerk user that has no `users` row (webhook not configured), post a trip | Trip is created; a `users` row now exists for that Clerk id |
 | Mode toggle | Toggle Travelling/Shopping in the navbar | Hero headline/CTA text changes; toast confirms the switch; persists across a refresh |
 
 ## Automated checks to run before any commit
@@ -50,7 +54,7 @@ Run `npx next dev`. Clerk automatically falls back to a "keyless" dev mode witho
 ```bash
 npx tsc --noEmit
 npx eslint .
-npx next build   # requires DATABASE_URL to fully collect page data; will fail at that step without it, which is expected/fine outside a DB-connected environment
+npx next build   # works without DATABASE_URL: the DB client is created lazily on first query
 ```
 
 ## Known testing limitation in a sandboxed/CI environment

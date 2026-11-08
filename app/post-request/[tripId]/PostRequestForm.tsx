@@ -29,7 +29,10 @@ export default function PostRequestForm({ tripId }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ tripId, ...form }),
       });
-      if (!res.ok) throw new Error("Failed to submit request");
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to submit request");
+      }
       router.push("/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");

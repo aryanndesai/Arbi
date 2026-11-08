@@ -1,6 +1,7 @@
 import { Webhook } from "svix";
 import { headers } from "next/headers";
-import { createUser, updateUser, deleteUser } from "@/db/queries";
+import { createUser, deleteUser } from "@/db/queries";
+import { buildUserProfile } from "@/lib/user-sync";
 
 type ClerkEmailAddress = {
   id: string;
@@ -30,12 +31,6 @@ type ClerkWebhookEvent =
   | ClerkDeletedEvent
   | { type: string; data: Record<string, unknown> };
 
-function getInitials(first: string | null, last: string | null): string {
-  const f = (first ?? "").trim().charAt(0).toUpperCase();
-  const l = (last ?? "").trim().charAt(0).toUpperCase();
-  return `${f}${l}` || "?";
-}
-
 function getPrimaryEmail(
   addresses: ClerkEmailAddress[],
   primaryId: string | null
@@ -56,15 +51,11 @@ function toUserRow(data: ClerkUserData) {
   );
   if (!email) return null;
 
-  const fullName =
-    [data.first_name, data.last_name].filter(Boolean).join(" ").trim() ||
-    email.split("@")[0];
-
-  return {
+  return buildUserProfile({
     email,
-    fullName,
-    avatarInitials: getInitials(data.first_name, data.last_name),
-  };
+    firstName: data.first_name,
+    lastName: data.last_name,
+  });
 }
 
 // Postgres raises 23503 when a delete would orphan a foreign-key reference
@@ -111,28 +102,16 @@ export async function POST(request: Request) {
 
   try {
     switch (event.type) {
-      case "user.created": {
-        const data = (event as ClerkUserEvent).data;
-        const row = toUserRow(data);
-        if (!row) {
-          return Response.json({ error: "No email on user" }, { status: 400 });
-        }
-        await createUser({ id: data.id, ...row });
-        return Response.json({ ok: true });
-      }
-
+      // createUser is an upsert, so a retried user.created, or a
+      // user.updated for a row we never saw, both leave the stores in sync.
+      case "user.created":
       case "user.updated": {
         const data = (event as ClerkUserEvent).data;
         const row = toUserRow(data);
         if (!row) {
           return Response.json({ error: "No email on user" }, { status: 400 });
         }
-        // If the row doesn't exist yet (e.g. we missed the created event),
-        // create it so the two stores stay in sync.
-        const updated = await updateUser(data.id, row);
-        if (!updated) {
-          await createUser({ id: data.id, ...row });
-        }
+        await createUser({ id: data.id, ...row });
         return Response.json({ ok: true });
       }
 

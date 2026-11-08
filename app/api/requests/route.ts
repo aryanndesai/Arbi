@@ -1,5 +1,12 @@
 import { auth } from "@clerk/nextjs/server";
-import { getRequestsForUser, createRequest } from "@/db/queries";
+import {
+  createRequest,
+  getRequestByTripAndBuyer,
+  getRequestsForUser,
+  getTripById,
+} from "@/db/queries";
+import { ensureUserRecord } from "@/lib/user-sync";
+import { validateRequestPayload } from "@/lib/validation";
 
 export async function GET() {
   const { userId } = await auth();
@@ -22,27 +29,52 @@ export async function POST(request: Request) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const body = await request.json().catch(() => null);
+  const validated = validateRequestPayload(body);
+  if (!validated.ok) {
+    return Response.json({ error: validated.error }, { status: 400 });
+  }
+  const data = validated.data;
+
   try {
-    const body = await request.json().catch(() => null);
-    if (
-      !body ||
-      typeof body.tripId !== "string" ||
-      typeof body.itemName !== "string" ||
-      typeof body.itemUrl !== "string" ||
-      typeof body.maxBudget !== "number" ||
-      typeof body.courierFee !== "number"
-    ) {
-      return Response.json({ error: "Invalid request payload" }, { status: 400 });
+    const trip = await getTripById(data.tripId);
+    if (!trip) {
+      return Response.json({ error: "Trip not found" }, { status: 404 });
+    }
+    if (trip.travelerId === userId) {
+      return Response.json(
+        { error: "You can't request an item on your own trip" },
+        { status: 403 }
+      );
+    }
+    if ((trip.status ?? "open") !== "open") {
+      return Response.json(
+        { error: "This trip is no longer accepting requests" },
+        { status: 409 }
+      );
+    }
+    if (await getRequestByTripAndBuyer(data.tripId, userId)) {
+      return Response.json(
+        { error: "You've already requested an item on this trip" },
+        { status: 409 }
+      );
+    }
+
+    if (!(await ensureUserRecord(userId))) {
+      return Response.json(
+        { error: "Your account isn't set up yet — please try again shortly" },
+        { status: 409 }
+      );
     }
 
     const itemRequest = await createRequest({
-      tripId: body.tripId,
+      tripId: data.tripId,
       buyerId: userId,
-      itemName: body.itemName,
-      itemUrl: body.itemUrl,
-      itemImageUrl: body.itemImageUrl || null,
-      maxBudget: body.maxBudget.toString(),
-      courierFee: body.courierFee.toString(),
+      itemName: data.itemName,
+      itemUrl: data.itemUrl,
+      itemImageUrl: data.itemImageUrl,
+      maxBudget: data.maxBudget.toString(),
+      courierFee: data.courierFee.toString(),
       status: "pending",
     });
 

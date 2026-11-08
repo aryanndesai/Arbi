@@ -5,7 +5,7 @@ import TripCard from "@/components/TripCard";
 import {
   getRequestsForUser,
   getTripsForUserSummary,
-  getUserById,
+  getPublicUserById,
 } from "@/db/queries";
 
 export default async function ProfilePage({
@@ -14,7 +14,7 @@ export default async function ProfilePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const user = await getUserById(id);
+  const user = await getPublicUserById(id);
   if (!user) notFound();
 
   const [trips, requests] = await Promise.all([

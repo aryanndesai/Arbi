@@ -31,7 +31,10 @@ export default function PostTripPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
-      if (!res.ok) throw new Error("Failed to post trip");
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to post trip");
+      }
       router.push("/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
@@ -110,6 +113,7 @@ export default function PostTripPage() {
               <input
                 required
                 type="date"
+                min={form.departureDate || undefined}
                 value={form.returnDate}
                 onChange={(e) =>
                   setForm({ ...form, returnDate: e.target.value })

@@ -3,8 +3,7 @@ import { notFound } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
 import Navbar from "@/components/Navbar";
 import RequestActions from "./RequestActions";
-import { getTripById as getDbTripById } from "@/db/queries";
-import { getTripById as getMockTripById } from "@/lib/mock-data";
+import { getTripById } from "@/db/queries";
 
 function formatDate(iso: string | null | undefined): string {
   if (!iso) return "—";
@@ -55,75 +54,37 @@ type RawTrip = {
 };
 
 async function loadTrip(id: string): Promise<RawTrip | null> {
-  // Try the real DB first
-  try {
-    const dbTrip = await getDbTripById(id);
-    if (dbTrip) {
-      return {
-        id: dbTrip.id,
-        travelerId: dbTrip.travelerId,
-        fromCountry: dbTrip.fromCountry,
-        toCountry: dbTrip.toCountry,
-        fromFlag: dbTrip.fromFlag,
-        toFlag: dbTrip.toFlag,
-        departureDate: dbTrip.departureDate,
-        returnDate: dbTrip.returnDate,
-        capacityKg: dbTrip.capacityKg,
-        status: dbTrip.status,
-        travelerName: dbTrip.traveler?.fullName ?? "Traveler",
-        travelerInitials: dbTrip.traveler?.avatarInitials ?? null,
-        travelerRating: dbTrip.traveler?.travelerRating
-          ? Number(dbTrip.traveler.travelerRating)
-          : undefined,
-        travelerTripsCompleted: dbTrip.traveler?.tripsCompleted ?? undefined,
-        requests: dbTrip.requests.map((r) => ({
-          id: r.id,
-          itemName: r.itemName,
-          itemUrl: r.itemUrl,
-          maxBudget: r.maxBudget,
-          courierFee: r.courierFee,
-          status: r.status,
-          buyerId: r.buyerId,
-          buyerName: r.buyerName ?? undefined,
-          buyerInitials: r.buyerInitials ?? undefined,
-          buyerRating: r.buyerRating ? Number(r.buyerRating) : undefined,
-        })),
-      };
-    }
-  } catch (error) {
-    // DB unavailable / empty — fall back to mock for development
-    console.error("DB lookup failed, falling back to mock:", error);
-  }
+  const dbTrip = await getTripById(id);
+  if (!dbTrip) return null;
 
-  // Fallback: mock data (dev/demo seed)
-  const mock = await getMockTripById(id);
-  if (!mock) return null;
   return {
-    id: mock.id,
-    travelerId: mock.traveler.id,
-    fromCountry: mock.fromCountry,
-    toCountry: mock.toCountry,
-    fromFlag: mock.fromFlag,
-    toFlag: mock.toFlag,
-    departureDate: mock.departureDate,
-    returnDate: mock.returnDate,
-    capacityKg: mock.capacityKg,
-    status: mock.status,
-    travelerName: mock.traveler.fullName,
-    travelerInitials: mock.traveler.avatarInitials,
-    travelerRating: mock.traveler.travelerRating,
-    travelerTripsCompleted: mock.traveler.tripsCompleted,
-    requests: mock.requests.map((r) => ({
+    id: dbTrip.id,
+    travelerId: dbTrip.travelerId,
+    fromCountry: dbTrip.fromCountry,
+    toCountry: dbTrip.toCountry,
+    fromFlag: dbTrip.fromFlag,
+    toFlag: dbTrip.toFlag,
+    departureDate: dbTrip.departureDate,
+    returnDate: dbTrip.returnDate,
+    capacityKg: dbTrip.capacityKg,
+    status: dbTrip.status,
+    travelerName: dbTrip.traveler?.fullName ?? "Traveler",
+    travelerInitials: dbTrip.traveler?.avatarInitials ?? null,
+    travelerRating: dbTrip.traveler?.travelerRating
+      ? Number(dbTrip.traveler.travelerRating)
+      : undefined,
+    travelerTripsCompleted: dbTrip.traveler?.tripsCompleted ?? undefined,
+    requests: dbTrip.requests.map((r) => ({
       id: r.id,
       itemName: r.itemName,
       itemUrl: r.itemUrl,
       maxBudget: r.maxBudget,
       courierFee: r.courierFee,
       status: r.status,
-      buyerId: r.buyer.id,
-      buyerName: r.buyer.fullName,
-      buyerInitials: r.buyer.avatarInitials,
-      buyerRating: r.buyer.buyerRating,
+      buyerId: r.buyerId,
+      buyerName: r.buyerName ?? undefined,
+      buyerInitials: r.buyerInitials ?? undefined,
+      buyerRating: r.buyerRating ? Number(r.buyerRating) : undefined,
     })),
   };
 }

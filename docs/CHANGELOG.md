@@ -1,30 +1,54 @@
-# Arbi — Change Log
+# Arbi — Changelog
 
-Dated entries, most recent first. This is the running record `DAILY_TASKS.md` refers back to — log here before moving to the next day's block.
+Dated entries, most recent first.
 
 ---
 
-## 2026-08-03 — Day 0: Audit + mock-data/DB split-brain fix
+## 2026-11-08 — Integrate all branches and fix the remaining issues
 
-**Audit**: full read-through of the codebase, written up in `docs/AUDIT.md`. Headline finding: several "known issues" listed in the original build brief (dashboard on mock data, mode toggle being cosmetic-only, trip detail missing accept/decline) had already been fixed in earlier sessions and no longer apply. The actual highest-impact bug was different: several pages read from `lib/mock-data.ts` while the write path (posting a trip, submitting a request) went to the real Postgres database — so anything created through the real UI was invisible to buyers and broke the request flow.
+### Integrated
+- **`claude/lucid-babbage-je4n2i`** (merged): home, browse, profile, and post-request pages read
+  Postgres instead of `lib/mock-data.ts`, so trips posted through the UI actually appear and can
+  receive requests. Added `TripSummary`, `getTripSummaries`, `getTripsForUserSummary`,
+  `getDestinationCountries`; buyer details on trip detail; `middleware.ts` → `proxy.ts`.
+- **`claude/cool-carson-teamly`** (merged): lazy Drizzle client, so importing `db` no longer throws
+  when `DATABASE_URL` is missing; `TrustSignals` and `RecentMatches` home sections.
+- **`claude/stoic-fermat-ht5vwe`** (merged): Clerk webhook syncs `user.updated` and `user.deleted`;
+  `.env.example`.
+- **`copilot/analyse-code-for-improvements`** (ported): its validation rules, adapted to UUID ids
+  and Clerk auth, now live in `lib/validation.ts`. Its spoofable `x-user-id` header auth was left out.
+- Documentation from the 10 docs-only branches consolidated into `docs/`.
 
-**Fixed**:
-- `app/page.tsx`, `app/trips/page.tsx`, `app/profile/[id]/page.tsx`, `app/post-request/[tripId]/page.tsx` — switched from `lib/mock-data.ts` to real Drizzle queries (`db/queries.ts`). Previously, requesting an item on a trip created through `/post-trip` would 404 on `/post-request/[tripId]` because that page only recognized mock trip IDs.
-- `db/queries.ts` — added `getTripSummaries()` (real trip list with per-trip request counts, replacing the mock `getTrips()`/`getTripById()` combo used for list views), `getTripsForUserSummary()`, and `getDestinationCountries()`. Updated `getTripById()` to join buyer info (`users`) onto each attached request — previously the trip-detail page's real-DB code path left buyer name/initials/rating blank for every request, only the mock fallback path populated them.
-- `types/index.ts` — added `TripSummary`, a lighter type for list views (trip + traveler summary + a request count) instead of requiring the full nested request array `Trip` needs.
-- `components/TripCard.tsx` — updated to the `TripSummary` type; the "N requests" badge now reads a `requestCount` field instead of `requests.length`.
-- `app/trips/[id]/page.tsx` — DB code path now carries buyer name/initials/rating and traveler rating/trips-completed through to the page, matching what the mock fallback path already did.
-- `middleware.ts` → `proxy.ts` — Next.js 16 renamed this file convention (same behavior, confirmed via the bundled docs in `node_modules/next/dist/docs/`). Mechanical rename, no logic change.
-- `.gitignore` — Next/Clerk dev tooling added a `.clerk/` ignore entry automatically while testing locally; kept it since local Clerk dev keys shouldn't be committed.
+### Fixed
+- **Build failure**: `next build` crashed without `DATABASE_URL` (DB client created at import time),
+  and the home page was statically prerendered, which would have frozen the trip list at build time.
+  Home and browse now render per request (`connection()` / awaited `searchParams`).
+- **Trip flags**: `POST /api/trips` never saved `fromFlag` / `toFlag`, so every posted trip showed 🌍.
+  Flags are now derived server-side.
+- **Users missing from the DB**: posting failed with a foreign-key error whenever the Clerk webhook
+  hadn't created the user row. `ensureUserRecord` now creates it from the Clerk session.
+- **Webhook retries**: a retried `user.created` hit a duplicate-key error and returned 500, so Clerk
+  retried indefinitely. `createUser` is now an upsert.
+- **Request rules**: the API accepted requests on non-existent trips (500), on your own trip, on
+  closed trips, and duplicates. All are now rejected with a clear 4xx; the post-request page redirects
+  in the same cases.
+- **Accept/decline**: a resolved request could be flipped again. It's now one-way, and accepting
+  creates a `matches` row.
+- **`/api/matches`** returned a fake in-memory object; it now validates, checks ownership, and persists.
+- **Email exposure**: `GET /api/trips`, `GET /api/trips/[id]`, and `GET /api/user/[id]` returned users'
+  email addresses. Public reads now use `getPublicUserById`, which never selects the email column.
+- **Malformed ids** (e.g. `/trips/t_1`) caused a Postgres error; they now 404.
+- **Trip detail** no longer falls back to mock data on DB errors (which hid outages and showed fake trips).
+- **Forms** show the API's error message instead of a generic "Failed to …".
+- **Ordering**: trip lists sort by departure date; requests by creation time.
+- Removed dead code: `lib/mock-data.ts`, unused `getTrips`/`updateUser` queries, and the old
+  mock-shaped interfaces in `types/index.ts`.
 
-**Verified**:
-- `npx tsc --noEmit` — clean.
-- `npx eslint .` — clean.
-- Spun up a throwaway local Postgres, pushed the Drizzle schema, seeded a real trip + request, and confirmed via `curl` against a running dev server that: the homepage lists the seeded trip, `/trips` lists it, `/trips/[id]` shows the buyer's name/item, and `/post-request/[tripId]` loads (no more 404) for that real trip ID.
-- Full `next build` succeeds end to end against a real database connection.
-- Local Postgres instance and `.env.local` were only used for this verification and are not part of the commit (`.env.local` is gitignored).
-
-**Not touched** (explicitly out of scope for today, see `DAILY_TASKS.md`):
-- Clerk webhook still only handles `user.created` (Day 1).
-- Stripe/Resend/PostHog remain stub-only, as instructed.
-- `lib/mock-data.ts` left in place, unused, pending your confirmation to delete.
+### Verified
+- `npx tsc --noEmit`, `npm run lint`, and `npm run build` (with no `DATABASE_URL`) all pass.
+- Against a local Postgres with seeded data: home, browse, filter, trip detail, profile, and
+  post-request render real rows; malformed ids 404; protected API routes return 401 when signed out;
+  no email in public API responses.
+- A script against the same database exercised validation, idempotent user upsert, duplicate-request
+  detection, one-way accept + match creation, ordering, and request counts.
+- Not verified: signed-in flows through a browser (needs real Clerk keys).

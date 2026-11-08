@@ -1,13 +1,16 @@
 import { auth } from "@clerk/nextjs/server";
-import { getTrips, createTrip } from "@/db/queries";
+import { getTripSummaries, createTrip } from "@/db/queries";
+import { getCountryFlag } from "@/lib/country-style";
+import { ensureUserRecord } from "@/lib/user-sync";
+import { validateTripPayload } from "@/lib/validation";
 
 // GET is public — anyone can browse trips
 export async function GET() {
   try {
-    const trips = await getTrips();
+    const trips = await getTripSummaries();
     return Response.json({ trips });
   } catch (error) {
-    console.error("FULL ERROR:", error);
+    console.error("Error fetching trips:", error);
     return Response.json({ error: "Failed to fetch trips" }, { status: 500 });
   }
 }
@@ -18,26 +21,32 @@ export async function POST(request: Request) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const body = await request.json().catch(() => null);
+  const validated = validateTripPayload(body);
+  if (!validated.ok) {
+    return Response.json({ error: validated.error }, { status: 400 });
+  }
+
   try {
-    const body = await request.json().catch(() => null);
-    if (
-      !body ||
-      typeof body.fromCountry !== "string" ||
-      typeof body.toCountry !== "string" ||
-      typeof body.departureDate !== "string" ||
-      typeof body.returnDate !== "string" ||
-      typeof body.capacityKg !== "number"
-    ) {
-      return Response.json({ error: "Invalid trip payload" }, { status: 400 });
+    if (!(await ensureUserRecord(userId))) {
+      return Response.json(
+        { error: "Your account isn't set up yet — please try again shortly" },
+        { status: 409 }
+      );
     }
 
+    const { fromCountry, toCountry, departureDate, returnDate, capacityKg } =
+      validated.data;
     const trip = await createTrip({
       travelerId: userId,
-      fromCountry: body.fromCountry,
-      toCountry: body.toCountry,
-      departureDate: body.departureDate,
-      returnDate: body.returnDate || null,
-      capacityKg: body.capacityKg.toString(),
+      fromCountry,
+      toCountry,
+      // Flags are derived server-side so every trip gets one, whatever the client sends
+      fromFlag: getCountryFlag(fromCountry),
+      toFlag: getCountryFlag(toCountry),
+      departureDate,
+      returnDate,
+      capacityKg: capacityKg.toString(),
       status: "open",
     });
 

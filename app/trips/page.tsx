@@ -8,10 +8,12 @@ export default async function TripsPage({
 }: {
   searchParams: Promise<{ to?: string }>;
 }) {
-  const [trips, countries, params] = await Promise.all([
+  // Await the request-bound searchParams first so the page is rendered per
+  // request — otherwise the DB calls run during prerender at build time.
+  const params = await searchParams;
+  const [trips, countries] = await Promise.all([
     getTripSummaries(),
     getDestinationCountries(),
-    searchParams,
   ]);
 
   const filter = params.to ?? "";
